@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
+    <title>深圳市政院</title>
+    <link href="../Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+    <link href="./css/pretty.css" rel="stylesheet">
+    <script type="text/javascript" src="./js/jquery.min.js"></script>
+    <script src="./js/config.js"></script>
+    <script type="text/javascript" src="./js/require.min.js" data-main="js/main"></script>
+    <style>
+        html, body, #cesiumContainer {
+            width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden;background-color: #000000;
+        }
+    </style>
+</head>
+<body>
+<div id="cesiumContainer"></div>
+<div id='loadingbar' class="spinner">
+    <div class="spinner-container container1">
+        <div class="circle1"></div>
+        <div class="circle2"></div>
+        <div class="circle3"></div>
+        <div class="circle4"></div>
+    </div>
+    <div class="spinner-container container2">
+        <div class="circle1"></div>
+        <div class="circle2"></div>
+        <div class="circle3"></div>
+        <div class="circle4"></div>
+    </div>
+    <div class="spinner-container container3">
+        <div class="circle1"></div>
+        <div class="circle2"></div>
+        <div class="circle3"></div>
+        <div class="circle4"></div>
+    </div>
+</div>
+<script>
+    function onload(Cesium) {
+        var viewer = new Cesium.Viewer('cesiumContainer');//Viewer是用于构建应用程序的基础部件
+		viewer.scene.mode = Cesium.SceneMode.COLUMBUS_VIEW//平面场景	
+		viewer.scene.imageryLayers.removeAll(true);
+		viewer.scene.globe.baseColor = new Cesium.Color(255,255,255,1.0);
+		
+		//创建地形服务提供者的实例，url为SuperMap iServer发布的TIN地形服务
+		var terrainProvider = new Cesium.CesiumTerrainProvider({
+			url : 'http://172.18.230.221:8090/iserver/services/3D-shenzhen-dem/rest/realspace/datas/shenzhen@dem',
+			isSct : true//地形服务源自SuperMap iServer发布时需设置isSct为true
+		});
+		viewer.terrainProvider = terrainProvider;
+		
+		var imageryLayers = viewer.imageryLayers;//获取将在地球上渲染的影像图层集合
+		var imageryProvider = new Cesium.SuperMapImageryProvider({//提供影像切片
+			url : "http://172.18.230.221:8090/iserver/services/map-ugcv5-szbasemap/rest/maps/szbasemap"//影像服务地址
+		});
+		var imageryLayer = imageryLayers.addImageryProvider(imageryProvider);//通过给定的影像服务提供者新建图层，将其添加至图层集合中。
+		/* Zoom to an imagery layer.
+		imageryLayer.getViewableRectangle().then(function (rectangle) {
+		console.log(rectangle);
+			return viewer.scene.camera.flyTo({
+				destination: rectangle
+			});
+		});*/
+
+		var point = new Cesium.Cartesian3(128487.09, 28985.41, 200);//影像中心点
+		var pointCartographic = viewer.scene.camera._projection.unproject(point);
+		var pointCX = Cesium.Math.toDegrees(pointCartographic.longitude);
+		var pointCY = Cesium.Math.toDegrees(pointCartographic.latitude);
+		//设置相机位置，定位至模型
+		viewer.scene.camera.flyTo({
+			destination: Cesium.Cartesian3.fromDegrees(pointCX, pointCY, pointCartographic.height),
+			orientation: {
+				heading: 0,
+				pitch: 0,
+				roll: 0
+			}
+		});
+		
+		var promise = viewer.scene.open('http://172.18.230.221:8090/iserver/services/3D-dianxin/rest/realspace');
+		Cesium.when(promise, function (layers) {
+			console.log(layers);
+			var layer = scene.layers.find('guandao@dianxin');
+			
+			
+		}, function (e) {
+			if (widget._showRenderLoopErrors) {
+				var title = '渲染时发生错误，已停止渲染。';
+				widget.showErrorPanel(title, undefined, e);
+			}
+		});
+		
+        $('#loadingbar').hide();
+    }
+
+</script>
+</body>
+</html>
