@@ -1,5 +1,7 @@
 require.config({
-    baseUrl: "./Build/Cesium",
+    paths: {
+        'Cesium': '../Build/Cesium/Cesium'
+    },
     shim: {
         Cesium: {
             exports: 'Cesium'
@@ -9,5 +11,5 @@ require.config({
 if (typeof Cesium !== 'undefined') {
     onload(Cesium);
 }else if ( typeof require === 'function' ) {
-    require(['Cesium'], onload)
+    require(['mapApp','mapConfig'], onload)
 }

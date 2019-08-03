@@ -1,29 +1,7 @@
-let option = {
-    //必须
-    cesiumContainer: 'cesiumContainer',
-    //Start in Columbus Viewer [COLUMBUS_VIEW, MORPHING, SCENE2D, SCENE3D]
-    sceneMode: 'COLUMBUS_VIEW',
-    //Hide the base layer picker
-    baseLayerPicker: false,
-}
-function onload(Cesium) {
-    let mapApp = new mapApp(Cesium, option)
+function onload(mapApp, mapConfig) {
+    let map = new mapApp(mapConfig)
 }
 
-class mapApp {
-    constructor(Cesium, option) {
-        this.option = _processOption(option)
-        this.Cesium = Cesium;
-        this.viewer = new Cesium.Viewer(option.cesiumContainer, this.option);
-        this.scene = this.viewer.scene;
-    }
-    _processOption(option) {
-        if (!option.cesiumContainer) {
-            throw '未设置地图容器Id----->option.cesiumContainer is undefined'
-        };
-        return option
-    }
-}
 
 // let viewer = new Cesium.Viewer('cesiumContainer'); //Viewer是用于构建应用程序的基础部件
 // let { scene } = viewer
