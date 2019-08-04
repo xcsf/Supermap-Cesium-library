@@ -8,7 +8,8 @@ define(function () {
         //确定地形是否投射或接受来自太阳的阴影。['CAST_ONLY', 'DISABLED', 'ENABLED', 'RECEIVE_ONLY']
         // terrainShadows: 'RECEIVE_ONLY'
         navigation: false,
-        creditContainer: 'xxx'
+        creditContainer: none
     }
+    
     return mapConfig;
 })
