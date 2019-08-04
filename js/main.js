@@ -9,6 +9,7 @@ require.config({
     }
 });
 if (typeof Cesium !== 'undefined') {
+    console.log('Cesium undefined')
     onload(Cesium);
 }else if ( typeof require === 'function' ) {
     require(['mapApp','mapConfig'], onload)

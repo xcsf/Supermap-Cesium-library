@@ -1,5 +1,16 @@
 function onload(mapApp, mapConfig) {
     let map = new mapApp(mapConfig)
+    let layer = map.addImageryLayer({
+        url: 'http://172.18.230.221:8090/iserver/services/map-ugcv5-szbasemap/rest/maps/szbasemap'
+    })
+    map.addScene('http://172.18.230.221:8090/iserver/services/3D-dianxin/rest/realspace').then(function (layer) {
+        // console.log('dianxin', layer)
+    })
+    // map.addTerrainLayer({
+    //     url: 'http://172.18.230.221:8090/iserver/services/3D-shenzhen-dem/rest/realspace/datas/shenzhen@dem'
+    // })
+    map.viewer.flyTo(layer);
+    // console.log(map.tile3DLayers)
 }
 
 
