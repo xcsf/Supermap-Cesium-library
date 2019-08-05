@@ -10,10 +10,11 @@ function onload(mapApp, mapConfig) {
     //     url: 'http://172.18.230.221:8090/iserver/services/3D-shenzhen-dem/rest/realspace/datas/shenzhen@dem'
     // })
     map.viewer.flyTo(layer);
-    map.addMapEventListener('LEFT_CLICK',function(e){
-        console.log(map.cartesianToWGS84BLH(e.position))
-        console.log(map.viewer.pickEvent)
-    })
+    // map.addMapEventListener('LEFT_CLICK', function (e) {
+    //     console.log(map.cartesianToWGS84BLH(e.position))
+    //     console.log(map.viewer.pickEvent)
+    // })
+
     // console.log(map.tile3DLayers)
 }
 

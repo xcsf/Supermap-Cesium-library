@@ -1,10 +1,11 @@
 define(['Cesium'], function (Cesium) {
     function constructor(option) {
-        //object
+        //Constructor
+        this.Color = Cesium.Color
+        //Object
         this.option = _processOption(option);
         this.Cesium = Cesium;
         this.viewer = new Cesium.Viewer(option.cesiumContainer, this.option);
-        this.Color = Cesium.Color
         _mergeOption(this.viewer.scene, this.option)
         this.scene = this.viewer.scene;
         this.camera = this.scene.camera;
@@ -32,8 +33,7 @@ define(['Cesium'], function (Cesium) {
         }
         function addTerrainLayer(option) {
             option.isSct === undefined && (option.isSct = true);
-            let terrainProvider = new Cesium.CesiumTerrainProvider(option)
-            this.viewer.terrainProvider = terrainProvider;
+            this.viewer.terrainProvider = new Cesium.CesiumTerrainProvider(option);
         }
         function addScene(url) {
             return this.scene.open(url)
