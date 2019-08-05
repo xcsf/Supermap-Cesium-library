@@ -13,6 +13,7 @@ define(['Cesium'], function (Cesium) {
         this.globe = this.scene.globe;
         this.tile3DLayers = this.scene.layers
         this.imageryLayers = this.viewer.imageryLayers;
+        _executeOption(option)
         //functions
         this.addImageryLayer = addImageryLayer;
         this.addTerrainLayer = addTerrainLayer;
@@ -22,6 +23,7 @@ define(['Cesium'], function (Cesium) {
         this.addCanvasEventListener = addCanvasEventListener;
         this.addMapEventListener = addMapEventListener;
         this.cartesianToWGS84BLH = cartesianToWGS84BLH;
+        this.measureHandler = measureHandler;
 
         function addImageryLayer(option) {
             let index = option.index && option.index
@@ -63,17 +65,24 @@ define(['Cesium'], function (Cesium) {
             handler.setInputAction(callback, Cesium.ScreenSpaceEventType[event], Cesium.KeyboardEventModifier[modifier]);
             return handler;
         }
+        /**
+         * 
+         * @param {string} event 
+         * 'LEFT_DOUBLE_CLICK' 'LEFT_CLICK' 'LEFT_DOWN' 'LEFT_UP' 'MIDDLE_CLICK' 'MIDDLE_DOWN'
+         * 'MIDDLE_UP' 'MOUSE_MOVE' 'PINCH_END' 'PINCH_MOVE' 'PINCH_START' 'RIGHT_CLICK' 'RIGHT_DOWN'
+         * 'RIGHT_UP' 'WHEEL'
+         * @param {function} callback 
+         * @param {string} modifier 'ALT''CTRL''SHIFT'
+         */
         function addMapEventListener(event, callback, modifier) {
-            let handler = new Cesium.ScreenSpaceEventHandler(this.canvas);
-            handler.setInputAction(function (e) {
+            return addCanvasEventListener(event, function (e) {
                 let arg = new Object()
                 for (key in e) {
                     let position = this.scene.pickPosition(e[key]);
                     position && (arg[key] = position);
                 }
                 callback(arg)
-            }.bind(this), Cesium.ScreenSpaceEventType[event], Cesium.KeyboardEventModifier[modifier]);
-            return handler;
+            }.bind(this), modifier)
         }
         function cartesianToWGS84BLH(cartesian) {
             let cartographic = Cesium.Cartographic.fromCartesian(cartesian)
@@ -82,7 +91,59 @@ define(['Cesium'], function (Cesium) {
             let H = cartographic.height;
             return { B, L, H }
         }
+        /**
+         * 
+         * @param {string} mode 'Area''Distance''DVH'
+         */
+        function measureHandler(mode, callback) {
+            if (Cesium.MeasureMode[mode] === undefined) {
+                throw Cesium.MeasureMode
+            }
+            let handler = new Cesium.MeasureHandler(this.viewer, Cesium.MeasureMode[mode], 1);
+            handler.measureEvt.addEventListener(function (result) {
+                switch (mode) {
+                    case 'Area':
+                        processAreaMeasure(result, handler)
+                        break
+                    case 'Distance':
+                        processDistanceMeasure(result, handler)
+                        break
+                    case 'DVH':
+                        processDVHMeasure(result, handler)
+                        break
+                    default:
+                }
+            });
+            handler.activeEvt.addEventListener(callback);
+            return handler
+        }
+        function processAreaMeasure(result, handler) {
+            let mj = Number(result.area);
+            let area = mj > 1000000 ? (mj / 1000000).toFixed(2) + 'km²' : mj.toFixed(2) + '㎡'
+            handler.areaLabel.text = '面积:' + area;
+        }
+        function processDistanceMeasure(result, handler) {
+            let dis = Number(result.distance);
+            let distance = dis > 1000 ? (dis / 1000).toFixed(2) + 'km' : dis.toFixed(2) + 'm';
+            handler.disLabel.text = '距离:' + distance;
+        }
+        function processDVHMeasure(result, handler) {
+            let { distance, verticalHeight, horizontalDistance } = result
+            let D = distance > 1000 ? (distance / 1000).toFixed(2) + 'km' : distance + 'm';
+            let V = verticalHeight > 1000 ? (verticalHeight / 1000).toFixed(2) + 'km' : verticalHeight + 'm';
+            let H = horizontalDistance > 1000 ? (horizontalDistance / 1000).toFixed(2) + 'km' : horizontalDistance + 'm';
+            handler.disLabel.text = '空间距离:' + D;
+            handler.vLabel.text = '垂直高度:' + V;
+            handler.hLabel.text = '水平距离:' + H;
+        }
+
     }
+    /**
+     * 将source中与target中有相同key的部分，合并到target中
+     * @param {object} target 
+     * @param {object} source 
+     * @param {Array} excludeKey 需要排除的key
+     */
     function _mergeOption(target, source, excludeKey = []) {
         for (key in source) {
             if (excludeKey.indexOf(key) < 0) {
@@ -97,6 +158,12 @@ define(['Cesium'], function (Cesium) {
         option.sceneMode && (option.sceneMode = Cesium.SceneMode[option.sceneMode])
         option.terrainShadows && (option.terrainShadows = Cesium.ShadowMode[option.terrainShadows])
         return option
+    }
+    function _executeOption(option) {
+        if (option.defaultMap !== undefined && option.defaultMap) {
+            !option.defaultMap && this.imageryLayers.removeAll()
+        }
+
     }
     return constructor
 })

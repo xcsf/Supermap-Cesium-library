@@ -1,7 +1,7 @@
 function onload(mapApp, mapConfig) {
     let map = new mapApp(mapConfig)
     let layer = map.addImageryLayer({
-        url: 'http://172.18.230.221:8090/iserver/services/map-ugcv5-szbasemap/rest/maps/szbasemap'
+        url: 'http://172.18.230.221:8090/iserver/services/map-ugcv5-szbasemap/rest/maps/szbasemap',
     })
     map.addScene('http://172.18.230.221:8090/iserver/services/3D-dianxin/rest/realspace').then(function (layer) {
         // console.log('dianxin', layer)
@@ -9,13 +9,21 @@ function onload(mapApp, mapConfig) {
     // map.addTerrainLayer({
     //     url: 'http://172.18.230.221:8090/iserver/services/3D-shenzhen-dem/rest/realspace/datas/shenzhen@dem'
     // })
-    map.viewer.flyTo(layer);
-    // map.addMapEventListener('LEFT_CLICK', function (e) {
-    //     console.log(map.cartesianToWGS84BLH(e.position))
-    //     console.log(map.viewer.pickEvent)
-    // })
 
-    // console.log(map.tile3DLayers)
+    map.viewer.flyTo(layer, { duration: 0 });
+    map.addMapEventListener('LEFT_CLICK', function (e) {
+        // console.log(map.cartesianToWGS84BLH(e.position))
+        // console.log(map.viewer.pickEvent)
+    })
+
+    let handlerDis = map.measureHandler('Area', function (isActive) {
+        console.log(isActive)
+    })
+    handlerDis.activate()
+    // map.viewer.pickEvent.addEventListener(function (feature) {
+    //     console.log(feature)
+    // });
+    console.log(map.imageryLayers)
 }
 
 
