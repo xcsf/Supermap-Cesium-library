@@ -11,15 +11,24 @@ function onload(mapApp, mapConfig) {
     // })
 
     map.viewer.flyTo(layer, { duration: 0 });
+
     map.addMapEventListener('LEFT_CLICK', function (e) {
-        // console.log(map.cartesianToWGS84BLH(e.position))
-        // console.log(map.viewer.pickEvent)
+        console.log(map.cartesianToWGS84BLH(e.position))
+        console.log('position',e.position)
     })
 
-    let handlerDis = map.measureHandler('Area', function (isActive) {
+    // let handlerDis = map.createMeasureHandler('Area', function (result) {
+    //     console.log(result)
+    // }, function (isActive) {
+    //     console.log(isActive)
+    // })
+    // handlerDis.activate()
+    let handlerDraw = map.createDrawHandler('Polygon', function (result) {
+        console.log(result)
+    }, function (isActive) {
         console.log(isActive)
     })
-    handlerDis.activate()
+    handlerDraw.activate()
     // map.viewer.pickEvent.addEventListener(function (feature) {
     //     console.log(feature)
     // });

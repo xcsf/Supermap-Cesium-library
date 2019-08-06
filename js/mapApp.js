@@ -23,7 +23,9 @@ define(['Cesium'], function (Cesium) {
         this.addCanvasEventListener = addCanvasEventListener;
         this.addMapEventListener = addMapEventListener;
         this.cartesianToWGS84BLH = cartesianToWGS84BLH;
-        this.measureHandler = measureHandler;
+        this.createMeasureHandler = createMeasureHandler;
+        this.createDrawHandler = createDrawHandler;
+
         /**
          * See http://support.supermap.com.cn:8090/webgl/Build/Documentation/SuperMapImageryProvider.html?classFilter=SuperMapImageryProvider
          * @param {object} option 
@@ -120,52 +122,106 @@ define(['Cesium'], function (Cesium) {
             return { B, L, H }
         }
         /**
-         * supermap
+         * See http://support.supermap.com.cn:8090/webgl/Build/Documentation/MeasureHandler.html
          * @param {string} mode 'Area''Distance''DVH'
-         * @param {function} callback e-> bool isActive
+         * @param {function} callback(result) -> object measure result
+         * @param {function} activecallback(e) -> bool isActive
+         * @param {string} clampMode See http://support.supermap.com.cn:8090/webgl/Build/Documentation/ClampMode.html
+         * @returns {MeasureHandler} handler 
          */
-        function measureHandler(mode, callback) {
+        function createMeasureHandler(mode, callback = _noop, activecallback = _noop, clampMode = 'S3mModel') {
             if (Cesium.MeasureMode[mode] === undefined) {
                 throw Cesium.MeasureMode
             }
-            let handler = new Cesium.MeasureHandler(this.viewer, Cesium.MeasureMode[mode], 1);
+            let handler = new Cesium.MeasureHandler(this.viewer, Cesium.MeasureMode[mode], clampMode);
             handler.measureEvt.addEventListener(function (result) {
                 switch (mode) {
                     case 'Area':
                         _processAreaMeasure(result, handler)
+                        callback(result)
                         break
                     case 'Distance':
                         _processDistanceMeasure(result, handler)
+                        callback(result)
                         break
                     case 'DVH':
                         _processDVHMeasure(result, handler)
+                        callback(result)
                         break
                     default:
                 }
             });
-            handler.activeEvt.addEventListener(callback);
+            handler.activeEvt.addEventListener(activecallback);
             return handler
         }
-        function _processAreaMeasure(result, handler) {
-            let mj = Number(result.area);
-            let area = mj > 1000000 ? (mj / 1000000).toFixed(2) + 'km²' : mj.toFixed(2) + '㎡'
-            handler.areaLabel.text = '面积:' + area;
+        /**
+         * See http://support.supermap.com.cn:8090/webgl/Build/Documentation/DrawHandler.html
+         * @param {string} mode 'Line''Marker''Point''Polygon'
+         * @param {function} callback(e) -> bool isActive
+         * @param {string} clampMode See http://support.supermap.com.cn:8090/webgl/Build/Documentation/ClampMode.html
+         * @returns {DrawHandler} handler 
+         */
+        function createDrawHandler(mode, callback = _noop, activecallback = _noop, clampMode = 'S3mModel') {
+            if (Cesium.DrawMode[mode] === undefined) {
+                throw Cesium.DrawMode
+            }
+            let handler = new Cesium.DrawHandler(this.viewer, Cesium.DrawMode[mode], Cesium.ClampMode[clampMode]);
+            handler.drawEvt.addEventListener(function (result) {
+                switch (mode) {
+                    case 'Point':
+                        _processPointDraw(result, handler)
+                        callback(result)
+                        break
+                    case 'Line':
+                        _processLineDraw(result, handler)
+                        callback(result)
+                        break
+                    case 'Polygon':
+                        _processPolygonDraw(result, handler)
+                        callback(result)
+                        break
+                    case 'Marker':
+                        _processMarkerDraw(result, handler)
+                        callback(result)
+                        break
+                    default:
+                }
+            });
+            handler.activeEvt.addEventListener(activecallback);
+            return handler
         }
-        function _processDistanceMeasure(result, handler) {
-            let dis = Number(result.distance);
-            let distance = dis > 1000 ? (dis / 1000).toFixed(2) + 'km' : dis.toFixed(2) + 'm';
-            handler.disLabel.text = '距离:' + distance;
-        }
-        function _processDVHMeasure(result, handler) {
-            let { distance, verticalHeight, horizontalDistance } = result
-            let D = distance > 1000 ? (distance / 1000).toFixed(2) + 'km' : distance + 'm';
-            let V = verticalHeight > 1000 ? (verticalHeight / 1000).toFixed(2) + 'km' : verticalHeight + 'm';
-            let H = horizontalDistance > 1000 ? (horizontalDistance / 1000).toFixed(2) + 'km' : horizontalDistance + 'm';
-            handler.disLabel.text = '空间距离:' + D;
-            handler.vLabel.text = '垂直高度:' + V;
-            handler.hLabel.text = '水平距离:' + H;
-        }
+    }
+    function _processPointDraw(result, handler) {
+        return result
+    }
+    function _processLineDraw(result, handler) {
+        return result
+    }
+    function _processPolygonDraw(result, handler) {
+        return result
+    }
+    function _processMarkerDraw(result, handler) {
+        return result
+    }
 
+    function _processAreaMeasure(result, handler) {
+        let mj = Number(result.area);
+        let area = mj > 1000000 ? (mj / 1000000).toFixed(2) + 'km²' : mj.toFixed(2) + '㎡'
+        handler.areaLabel.text = '面积:' + area;
+    }
+    function _processDistanceMeasure(result, handler) {
+        let dis = Number(result.distance);
+        let distance = dis > 1000 ? (dis / 1000).toFixed(2) + 'km' : dis.toFixed(2) + 'm';
+        handler.disLabel.text = '距离:' + distance;
+    }
+    function _processDVHMeasure(result, handler) {
+        let { distance, verticalHeight, horizontalDistance } = result
+        let D = distance > 1000 ? (distance / 1000).toFixed(2) + 'km' : distance + 'm';
+        let V = verticalHeight > 1000 ? (verticalHeight / 1000).toFixed(2) + 'km' : verticalHeight + 'm';
+        let H = horizontalDistance > 1000 ? (horizontalDistance / 1000).toFixed(2) + 'km' : horizontalDistance + 'm';
+        handler.disLabel.text = '空间距离:' + D;
+        handler.vLabel.text = '垂直高度:' + V;
+        handler.hLabel.text = '水平距离:' + H;
     }
     /**
      * 将source中与target中有相同key的部分，合并到target中
@@ -194,5 +250,7 @@ define(['Cesium'], function (Cesium) {
         }
 
     }
+    function _noop() { }
+
     return constructor
 })
