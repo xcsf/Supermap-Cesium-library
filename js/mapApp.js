@@ -24,7 +24,10 @@ define(['Cesium'], function (Cesium) {
         this.addMapEventListener = addMapEventListener;
         this.cartesianToWGS84BLH = cartesianToWGS84BLH;
         this.measureHandler = measureHandler;
-
+        /**
+         * See http://support.supermap.com.cn:8090/webgl/Build/Documentation/SuperMapImageryProvider.html?classFilter=SuperMapImageryProvider
+         * @param {object} option 
+         */
         function addImageryLayer(option) {
             let index = option.index && option.index
             let layer = this.imageryLayers.addImageryProvider(
@@ -33,17 +36,35 @@ define(['Cesium'], function (Cesium) {
             );
             return layer
         }
+        /**
+         * See http://support.supermap.com.cn:8090/webgl/Build/Documentation/CesiumTerrainProvider.html
+         * @param {object} option 
+         */
         function addTerrainLayer(option) {
             option.isSct === undefined && (option.isSct = true);
             this.viewer.terrainProvider = new Cesium.CesiumTerrainProvider(option);
         }
+        /**
+         * See http://support.supermap.com.cn:8090/webgl/Build/Documentation/Scene.html
+         * @param {object} url 
+         */
         function addScene(url) {
             return this.scene.open(url)
         }
+        /**
+         * See http://support.supermap.com.cn:8090/webgl/Build/Documentation/Scene.html
+         * @param {object} option 
+         */
         function addS3MTilesLayerByScp(option) {
             let { url, index } = option
             return this.scene.addS3MTilesLayerByScp(url, option, index)
         }
+        /**
+         * http://support.supermap.com.cn:8090/webgl/Build/Documentation/S3MTilesLayer.html
+         * http://support.supermap.com.cn:8090/webgl/Build/Documentation/Style3D.html
+         * @param {S3MTilesLayer} layer 
+         * @param {object} option 
+         */
         function setS3MTilesLayerStyle3D(layer, option) {
             var style3D = new Cesium.Style3D();
             _mergeOption(style3D, option)
@@ -57,6 +78,14 @@ define(['Cesium'], function (Cesium) {
             // }
             layer.style3D = style3D;
         }
+        /**
+         * @param {string} event 
+         * 'LEFT_DOUBLE_CLICK' 'LEFT_CLICK' 'LEFT_DOWN' 'LEFT_UP' 'MIDDLE_CLICK' 'MIDDLE_DOWN'
+         * 'MIDDLE_UP' 'MOUSE_MOVE' 'PINCH_END' 'PINCH_MOVE' 'PINCH_START' 'RIGHT_CLICK' 'RIGHT_DOWN'
+         * 'RIGHT_UP' 'WHEEL'
+         * @param {function} callback 
+         * @param {string} modifier 'ALT''CTRL''SHIFT'
+         */
         function addCanvasEventListener(event, callback, modifier) {
             if (Cesium.ScreenSpaceEventType[event] === undefined) {
                 throw Cesium.ScreenSpaceEventType
@@ -66,7 +95,6 @@ define(['Cesium'], function (Cesium) {
             return handler;
         }
         /**
-         * 
          * @param {string} event 
          * 'LEFT_DOUBLE_CLICK' 'LEFT_CLICK' 'LEFT_DOWN' 'LEFT_UP' 'MIDDLE_CLICK' 'MIDDLE_DOWN'
          * 'MIDDLE_UP' 'MOUSE_MOVE' 'PINCH_END' 'PINCH_MOVE' 'PINCH_START' 'RIGHT_CLICK' 'RIGHT_DOWN'
@@ -92,8 +120,9 @@ define(['Cesium'], function (Cesium) {
             return { B, L, H }
         }
         /**
-         * 
+         * supermap
          * @param {string} mode 'Area''Distance''DVH'
+         * @param {function} callback e-> bool isActive
          */
         function measureHandler(mode, callback) {
             if (Cesium.MeasureMode[mode] === undefined) {
@@ -103,13 +132,13 @@ define(['Cesium'], function (Cesium) {
             handler.measureEvt.addEventListener(function (result) {
                 switch (mode) {
                     case 'Area':
-                        processAreaMeasure(result, handler)
+                        _processAreaMeasure(result, handler)
                         break
                     case 'Distance':
-                        processDistanceMeasure(result, handler)
+                        _processDistanceMeasure(result, handler)
                         break
                     case 'DVH':
-                        processDVHMeasure(result, handler)
+                        _processDVHMeasure(result, handler)
                         break
                     default:
                 }
@@ -117,17 +146,17 @@ define(['Cesium'], function (Cesium) {
             handler.activeEvt.addEventListener(callback);
             return handler
         }
-        function processAreaMeasure(result, handler) {
+        function _processAreaMeasure(result, handler) {
             let mj = Number(result.area);
             let area = mj > 1000000 ? (mj / 1000000).toFixed(2) + 'km²' : mj.toFixed(2) + '㎡'
             handler.areaLabel.text = '面积:' + area;
         }
-        function processDistanceMeasure(result, handler) {
+        function _processDistanceMeasure(result, handler) {
             let dis = Number(result.distance);
             let distance = dis > 1000 ? (dis / 1000).toFixed(2) + 'km' : dis.toFixed(2) + 'm';
             handler.disLabel.text = '距离:' + distance;
         }
-        function processDVHMeasure(result, handler) {
+        function _processDVHMeasure(result, handler) {
             let { distance, verticalHeight, horizontalDistance } = result
             let D = distance > 1000 ? (distance / 1000).toFixed(2) + 'km' : distance + 'm';
             let V = verticalHeight > 1000 ? (verticalHeight / 1000).toFixed(2) + 'km' : verticalHeight + 'm';
