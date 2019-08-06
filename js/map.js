@@ -4,7 +4,10 @@ function onload(mapApp, mapConfig) {
         url: 'http://172.18.230.221:8090/iserver/services/map-ugcv5-szbasemap/rest/maps/szbasemap',
     })
     map.addScene('http://172.18.230.221:8090/iserver/services/3D-dianxin/rest/realspace').then(function (layer) {
-        // console.log('dianxin', layer)
+        console.log(layer)
+        layer[2].datasetInfo().then(function (e) {
+            console.log('dianxin', e)
+        })
     })
     // map.addTerrainLayer({
     //     url: 'http://172.18.230.221:8090/iserver/services/3D-shenzhen-dem/rest/realspace/datas/shenzhen@dem'
@@ -14,7 +17,7 @@ function onload(mapApp, mapConfig) {
 
     map.addMapEventListener('LEFT_CLICK', function (e) {
         console.log(map.cartesianToWGS84BLH(e.position))
-        console.log('position',e.position)
+        console.log('position', e.position)
     })
 
     // let handlerDis = map.createMeasureHandler('Area', function (result) {
@@ -32,7 +35,7 @@ function onload(mapApp, mapConfig) {
     // map.viewer.pickEvent.addEventListener(function (feature) {
     //     console.log(feature)
     // });
-    console.log(map.imageryLayers)
+    // console.log(map.imageryLayers)
 }
 
 

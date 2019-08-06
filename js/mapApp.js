@@ -114,6 +114,11 @@ define(['Cesium'], function (Cesium) {
                 callback(arg)
             }.bind(this), modifier)
         }
+        /**
+         * 
+         * @param {object} cartesian 
+         * @returns {object} {B,L,H}
+         */
         function cartesianToWGS84BLH(cartesian) {
             let cartographic = Cesium.Cartographic.fromCartesian(cartesian)
             let B = Cesium.Math.toDegrees(cartographic.latitude);
