@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+
+	<head>
+		<meta charset="utf-8">
+		<meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1">
+		<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
+		<title>创建三维场景</title>
+		<link href="../Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+		<link href="./css/pretty.css" rel="stylesheet">
+		<script src="./js/supermap/SuperMap.Include.js"></script>
+		<script src="./js/slider.js"></script>
+		<script src="./js/jquery.min.js"></script>
+		<script src="js/config.js"></script>
+		<script type="text/javascript" src="./js/require.min.js" data-main="js/main"></script>
+		<script src="NWConfig.js"></script>
+		<style>
+			html,
+			body,
+			#cesiumContainer {
+				width: 100%;
+				height: 100%;
+				margin: 0;
+				padding: 0;
+				overflow: hidden;
+				background-color: #000000;
+			}
+		</style>
+	</head>
+
+	<body>
+		<div id="cesiumContainer"></div>
+		<div id='loadingbar' class="spinner">
+			<div class="spinner-container container1">
+				<div class="circle1"></div>
+				<div class="circle2"></div>
+				<div class="circle3"></div>
+				<div class="circle4"></div>
+			</div>
+			<div class="spinner-container container2">
+				<div class="circle1"></div>
+				<div class="circle2"></div>
+				<div class="circle3"></div>
+				<div class="circle4"></div>
+			</div>
+			<div class="spinner-container container3">
+				<div class="circle1"></div>
+				<div class="circle2"></div>
+				<div class="circle3"></div>
+				<div class="circle4"></div>
+			</div>
+		</div>
+		<div id="mapContainer" style="position: absolute;right:0 ;width: 10%;bottom: 0;height: 15%;background-color: white;"></div>
+		<script>
+			var viewer;
+			var scene;
+			var map;
+			var mapLayer;
+			var vectorLayer;
+
+			var mapUrl = "http://support.supermap.com.cn:8090/iserver/services/map-world/rest/maps/World";
+			var mapName = "World";
+
+			var style = {
+				strokeColor: "#304DBE",
+				strokeWidth: 1,
+				pointerEvents: "visiblePainted",
+				fillColor: "#FF0000",
+				fillOpacity: 0.8,
+				pointRadius: 5
+			}
+
+			function onload(Cesium) {
+				viewer = new Cesium.Viewer('cesiumContainer');
+
+				intoverViewMap();
+				scene = viewer.scene;
+
+				viewer.imageryLayers.addImageryProvider(new Cesium.SuperMapImageryProvider({
+					url: mapUrl
+				}));
+
+				ScenetoMap();
+
+				$('#loadingbar').remove();
+			}
+
+			var intoverViewMap = function() {
+				map = new SuperMap.Map("mapContainer", {
+					controls: [
+						new SuperMap.Control.Navigation({
+							dragPanOptions: {
+								enableKinetic: true
+							}
+						})
+					]
+				});
+				mapLayer = new SuperMap.Layer.TiledDynamicRESTLayer(mapName, mapUrl, {
+					transparent: true,
+					cacheEnabled: true
+				}, {
+					maxResolution: "auto"
+				});
+				mapLayer.events.on({
+					"layerInitialized": addLayer
+				});
+				vectorLayer = new SuperMap.Layer.Vector("Vector Layer");
+			}
+
+			function addLayer() {
+				map.addLayers([mapLayer, vectorLayer]);
+				map.setCenter(new SuperMap.LonLat(0, 0), 0);
+			}
+			var ScenetoMap = function() {
+				scene.camera.moveEnd.addEventListener(function() {
+					//scene.postRender.addEventListener(function() {
+					var cameraPosition = scene.camera.position;
+
+					//将笛卡尔坐标转化为经纬度坐标
+					var cartographic = Cesium.Cartographic.fromCartesian(cameraPosition);
+					var longitude = Cesium.Math.toDegrees(cartographic.longitude);
+					var latitude = Cesium.Math.toDegrees(cartographic.latitude);
+					var height = cartographic.height;
+
+					vectorLayer.removeAllFeatures();
+					var point = new SuperMap.Geometry.Point(longitude, latitude);
+					var feature = new SuperMap.Feature.Vector();
+					feature.geometry = point;
+					feature.style = style;
+					vectorLayer.addFeatures(feature);
+
+					var heightmap = height + 100000;
+					var size = _calculateSizeFromAltitude(heightmap);
+					size = size * 0.5;
+					//设置地图显示范围
+					var bounds = new SuperMap.Bounds(longitude - size, latitude - size, longitude + size, latitude + size);
+					map.zoomToExtent(bounds, false);
+
+				})
+
+			}
+
+			/// <summary>
+			/// 根据给定的场景高度计算地图中显示范围的宽度
+			/// </summary>
+			/// <param name="altitude">场景高度</param>
+			/// <returns>地图显示范围尺寸</returns>
+			function _calculateSizeFromAltitude(altitude) {
+				var _PI = 3.1415926;
+				var _earthRadius = 6378137;
+				var size;
+				if(altitude >= _earthRadius) { //当场景高度大于可全幅显示整球的高度时
+					var ratio = (altitude + _earthRadius) * 0.5;
+					size = 120 * ratio / _earthRadius
+				} else { //当场景高度小于可全幅显示整球的高度时，即无法看到整球时
+					var tan30 = Math.tan(_PI / 6);
+					//设置方程组的a,b,c
+					var a = (Math.pow(tan30, 2) + 1) * Math.pow(_earthRadius, 2);
+					var b = -2 * (_earthRadius + altitude) * _earthRadius * Math.pow(tan30, 2);
+					var c = Math.pow(tan30, 2) * Math.pow(_earthRadius + altitude, 2) - Math.pow(_earthRadius, 2.0);
+					//解一元二次方程，取锐角，因此余弦值较大
+					var cosd = (-b + Math.sqrt(Math.pow(b, 2) - 4 * a * c)) / (2 * a);
+					var d = Math.acos(cosd);
+					var widthd = 2 * d * _earthRadius;
+					size = (widthd / (_PI * _earthRadius)) * 180;
+				}
+				return size;
+			}
+		</script>
+	</body>
+
+</html>

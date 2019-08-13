@@ -12,6 +12,7 @@ define(['Cesium'], function (Cesium) {
         this.canvas = this.scene.canvas;
         this.globe = this.scene.globe;
         this.tile3DLayers = this.scene.layers
+        this.tile3DLayerArray = this.tile3DLayers._layers._array
         this.imageryLayers = this.viewer.imageryLayers;
         _executeOption(option)
         //functions
@@ -25,10 +26,13 @@ define(['Cesium'], function (Cesium) {
         this.cartesianToWGS84BLH = cartesianToWGS84BLH;
         this.createMeasureHandler = createMeasureHandler;
         this.createDrawHandler = createDrawHandler;
+        this.createPolygonClipHandler = createPolygonClipHandler;
 
         /**
          * See http://support.supermap.com.cn:8090/webgl/Build/Documentation/SuperMapImageryProvider.html?classFilter=SuperMapImageryProvider
          * @param {object} option 
+         * @return {ImageryLayer}
+         * See http://support.supermap.com.cn:8090/webgl/Build/Documentation/ImageryLayer.html
          */
         function addImageryLayer(option) {
             let index = option.index && option.index
@@ -56,9 +60,13 @@ define(['Cesium'], function (Cesium) {
         /**
          * See http://support.supermap.com.cn:8090/webgl/Build/Documentation/Scene.html
          * @param {object} option 
+         * url String iserver中发布的配置文件地址。
+         * eg: http://172.18.230.221:8090/iserver/services/3D-dianxin/rest/realspace/datas/fengguan@dianxin/config
+         * name String (必须) 图层名
          */
         function addS3MTilesLayerByScp(option) {
             let { url, index } = option
+            console.log(url)
             return this.scene.addS3MTilesLayerByScp(url, option, index)
         }
         /**
@@ -120,10 +128,14 @@ define(['Cesium'], function (Cesium) {
          * @returns {object} {B,L,H}
          */
         function cartesianToWGS84BLH(cartesian) {
-            let cartographic = Cesium.Cartographic.fromCartesian(cartesian)
-            let B = Cesium.Math.toDegrees(cartographic.latitude);
-            let L = Cesium.Math.toDegrees(cartographic.longitude);
-            let H = cartographic.height;
+            let B, L, H
+            if (cartesian) {
+                let cartographic = Cesium.Cartographic.fromCartesian(cartesian)
+                B = Cesium.Math.toDegrees(cartographic.latitude);
+                L = Cesium.Math.toDegrees(cartographic.longitude);
+                H = cartographic.height;
+                return { B, L, H }
+            }
             return { B, L, H }
         }
         /**
@@ -164,7 +176,7 @@ define(['Cesium'], function (Cesium) {
          * @param {string} mode 'Line''Marker''Point''Polygon'
          * @param {function} callback(e) -> bool isActive
          * @param {string} clampMode See http://support.supermap.com.cn:8090/webgl/Build/Documentation/ClampMode.html
-         * @returns {DrawHandler} handler 
+         * @returns handler 
          */
         function createDrawHandler(mode, callback = _noop, activecallback = _noop, clampMode = 'S3mModel') {
             if (Cesium.DrawMode[mode] === undefined) {
@@ -194,6 +206,23 @@ define(['Cesium'], function (Cesium) {
             });
             handler.activeEvt.addEventListener(activecallback);
             return handler
+        }
+        function createPolygonClipHandler(layers, clipMode = 'CLIP_INSIDE') {
+            let polygonArray = []
+            let regions = [];
+            let polygonClipHandler = this.createDrawHandler('Polygon', function (result) {
+                let { positions } = result.object
+                positions.map((item) => {
+                    let { B, L, H } = cartesianToWGS84BLH(item)
+                    polygonArray.push(L, B, H)
+                })
+                regions.push(polygonArray)
+                layers.map((layer) => {
+                    layer.setModifyRegions(regions, Cesium.ModifyRegionMode[clipMode]);
+                })
+                polygonClipHandler.polygon.show = false;
+            })
+            return polygonClipHandler
         }
     }
     function _processPointDraw(result, handler) {
@@ -253,7 +282,6 @@ define(['Cesium'], function (Cesium) {
         if (option.defaultMap !== undefined && option.defaultMap) {
             !option.defaultMap && this.imageryLayers.removeAll()
         }
-
     }
     function _noop() { }
 

@@ -3,21 +3,35 @@ function onload(mapApp, mapConfig) {
     let layer = map.addImageryLayer({
         url: 'http://172.18.230.221:8090/iserver/services/map-ugcv5-szbasemap/rest/maps/szbasemap',
     })
-    map.addScene('http://172.18.230.221:8090/iserver/services/3D-dianxin/rest/realspace').then(function (layer) {
-        console.log(layer)
-        layer[2].datasetInfo().then(function (e) {
-            console.log('dianxin', e)
-        })
+    layer.alpha = 0.5
+    map.addScene('http://172.18.230.221:8090/iserver/services/3D-dianxin/rest/realspace').then(function (layers) {
+        // let layer = map.scene.layers.find('fengguan@dianxin');
+        // console.log(layer)
+        // layer.setQueryParameter({
+        //     url: 'http://172.18.230.221:8090/iserver/services/data-dianxin/rest/data',
+        //     dataSourceName: 'dianxin',
+        //     dataSetName: '风管',
+        //     isMerge : false
+        // })
+        // layer.datasetInfo().then(function (e) {
+        //     console.log('dianxin', e)
+        // })
     })
-    // map.addTerrainLayer({
-    //     url: 'http://172.18.230.221:8090/iserver/services/3D-shenzhen-dem/rest/realspace/datas/shenzhen@dem'
+    map.addTerrainLayer({
+        url: 'http://172.18.230.221:8090/iserver/services/3D-shenzhen-dem/rest/realspace/datas/shenzhen@dem'
+    })
+    // map.addS3MTilesLayerByScp({
+    //     name: 'test',
+    //     url: 'http://172.18.230.221:8090/iserver/services/3D-dianxin/rest/realspace/datas/changguimoxing@dianxin/config',
+    // }).then(function (layer) {
+    //     console.log(layer)
     // })
 
     map.viewer.flyTo(layer, { duration: 0 });
 
     map.addMapEventListener('LEFT_CLICK', function (e) {
-        console.log(map.cartesianToWGS84BLH(e.position))
         console.log('position', e.position)
+        console.log(map.cartesianToWGS84BLH(e.position))
     })
 
     // let handlerDis = map.createMeasureHandler('Area', function (result) {
@@ -26,16 +40,23 @@ function onload(mapApp, mapConfig) {
     //     console.log(isActive)
     // })
     // handlerDis.activate()
-    let handlerDraw = map.createDrawHandler('Polygon', function (result) {
-        console.log(result)
-    }, function (isActive) {
-        console.log(isActive)
-    })
-    handlerDraw.activate()
+
+    // let handlerDraw = map.createDrawHandler('Polygon', function (result) {
+    //     console.log(result)
+    // }, function (isActive) {
+    //     console.log(isActive)
+    // })
+    // handlerDraw.activate()
+
+
+    let handlerClip = map.createPolygonClipHandler(map.tile3DLayerArray)
+    handlerClip.activate()
+
     // map.viewer.pickEvent.addEventListener(function (feature) {
     //     console.log(feature)
     // });
-    // console.log(map.imageryLayers)
+    console.log(map.imageryLayers)
+    console.log(map.tile3DLayers)
 }
 
 
