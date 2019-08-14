@@ -1,4 +1,5 @@
 define(['Cesium'], function (Cesium) {
+
     function constructor(option) {
         //Constructor
         this.Color = Cesium.Color
@@ -27,7 +28,7 @@ define(['Cesium'], function (Cesium) {
         this.createMeasureHandler = createMeasureHandler;
         this.createDrawHandler = createDrawHandler;
         this.createPolygonClipHandler = createPolygonClipHandler;
-
+        this.getCameraView = getCameraView;
         /**
          * See http://support.supermap.com.cn:8090/webgl/Build/Documentation/SuperMapImageryProvider.html?classFilter=SuperMapImageryProvider
          * @param {object} option 
@@ -223,6 +224,20 @@ define(['Cesium'], function (Cesium) {
                 polygonClipHandler.polygon.show = false;
             })
             return polygonClipHandler
+        }
+        function getCameraView() {
+            let { height, latitude, longitude } = this.camera.positionCartographic
+            let pitch = this.camera.pitch
+            let heading = this.camera.heading
+            let roll = this.camera.roll
+            return {
+                destination: this.Cesium.Cartesian3.fromRadians(longitude, latitude, height),
+                orientation: {
+                    pitch,
+                    heading,
+                    roll
+                }
+            }
         }
     }
     function _processPointDraw(result, handler) {

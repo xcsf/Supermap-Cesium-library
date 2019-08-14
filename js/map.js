@@ -3,7 +3,7 @@ function onload(mapApp, mapConfig) {
     let layer = map.addImageryLayer({
         url: 'http://172.18.230.221:8090/iserver/services/map-ugcv5-szbasemap/rest/maps/szbasemap',
     })
-    layer.alpha = 0.5
+    layer.brightness  = 6
     map.addScene('http://172.18.230.221:8090/iserver/services/3D-dianxin/rest/realspace').then(function (layers) {
         // let layer = map.scene.layers.find('fengguan@dianxin');
         // console.log(layer)
@@ -49,8 +49,22 @@ function onload(mapApp, mapConfig) {
     // handlerDraw.activate()
 
 
-    let handlerClip = map.createPolygonClipHandler(map.tile3DLayerArray)
-    handlerClip.activate()
+    // let handlerClip = map.createPolygonClipHandler(map.tile3DLayerArray)
+    // handlerClip.activate()
+    map.camera.changed.addEventListener(function () {
+        console.log(map.getCameraView())
+    })
+
+    setTimeout(() => {
+        map.camera.setView({
+            destination: new map.Cesium.Cartesian3(6377575.834294122, 128491.22351314085, 28295.01335058909),
+            orientation: {
+                heading: 0.4918863872625199,
+                pitch: -0.5696071332568486,
+                roll: 6.283185307179586
+            }
+        })
+    }, 2000)
 
     // map.viewer.pickEvent.addEventListener(function (feature) {
     //     console.log(feature)
