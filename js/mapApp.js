@@ -1,5 +1,4 @@
 define(['Cesium'], function (Cesium) {
-
     function constructor(option) {
         //Constructor
         this.Color = Cesium.Color
@@ -8,17 +7,19 @@ define(['Cesium'], function (Cesium) {
         this.Cesium = Cesium;
         this.viewer = new Cesium.Viewer(option.cesiumContainer, this.option);
         _mergeOption(this.viewer.scene, this.option)
+        _mergeOption(this.viewer.scene.screenSpaceCameraController, this.option)
         this.scene = this.viewer.scene;
+        this.bloomEffect = this.viewer.scene.bloomEffect
         this.camera = this.scene.camera;
         this.canvas = this.scene.canvas;
         this.globe = this.scene.globe;
         this.tile3DLayers = this.scene.layers
         this.tile3DLayerArray = this.tile3DLayers._layers._array
         this.imageryLayers = this.viewer.imageryLayers;
-        _executeOption(option)
         //functions
         this.addImageryLayer = addImageryLayer;
         this.addTerrainLayer = addTerrainLayer;
+        this.addArcgisImageryLayer = addArcgisImageryLayer;
         this.addScene = addScene;
         this.addS3MTilesLayerByScp = addS3MTilesLayerByScp;
         this.setS3MTilesLayerStyle3D = setS3MTilesLayerStyle3D;
@@ -36,9 +37,23 @@ define(['Cesium'], function (Cesium) {
          * See http://support.supermap.com.cn:8090/webgl/Build/Documentation/ImageryLayer.html
          */
         function addImageryLayer(option) {
-            let index = option.index && option.index
+            let { index } = option
             let layer = this.imageryLayers.addImageryProvider(
                 new Cesium.SuperMapImageryProvider(option),
+                index
+            );
+            return layer
+        }
+        /**
+         * See http://support.supermap.com.cn:8090/webgl/Build/Documentation/ArcGisMapServerImageryProvider.html
+         * @param {object} option 
+         * @return {ImageryLayer}
+         * See http://support.supermap.com.cn:8090/webgl/Build/Documentation/ImageryLayer.html
+         */
+        function addArcgisImageryLayer(option) {
+            let { index } = option
+            let layer = this.imageryLayers.addImageryProvider(
+                new Cesium.ArcGisMapServerImageryProvider(option),
                 index
             );
             return layer
@@ -67,7 +82,6 @@ define(['Cesium'], function (Cesium) {
          */
         function addS3MTilesLayerByScp(option) {
             let { url, index } = option
-            console.log(url)
             return this.scene.addS3MTilesLayerByScp(url, option, index)
         }
         /**
@@ -147,7 +161,7 @@ define(['Cesium'], function (Cesium) {
          * @param {string} clampMode See http://support.supermap.com.cn:8090/webgl/Build/Documentation/ClampMode.html
          * @returns {MeasureHandler} handler 
          */
-        function createMeasureHandler(mode, callback = _noop, activecallback = _noop, clampMode = 'S3mModel') {
+        function createMeasureHandler(mode, callback = _noop, activecallback = _noop, clampMode = 'Ground') {
             if (Cesium.MeasureMode[mode] === undefined) {
                 throw Cesium.MeasureMode
             }
@@ -169,6 +183,7 @@ define(['Cesium'], function (Cesium) {
                     default:
                 }
             });
+            handler.enableDepthTest = false;
             handler.activeEvt.addEventListener(activecallback);
             return handler
         }
@@ -205,9 +220,16 @@ define(['Cesium'], function (Cesium) {
                     default:
                 }
             });
+            handler.enableDepthTest = false;
             handler.activeEvt.addEventListener(activecallback);
             return handler
         }
+        /**
+         * See http://support.supermap.com.cn:8090/webgl/Build/Documentation/DrawHandler.html
+         * @param {Array} layers this.tile3DLayerArray or custom
+         * @param {string} clipMode See http://support.supermap.com.cn:8090/webgl/Build/Documentation/ModifyRegionMode.html
+         * @returns handler 
+         */
         function createPolygonClipHandler(layers, clipMode = 'CLIP_INSIDE') {
             let polygonArray = []
             let regions = [];
@@ -225,8 +247,14 @@ define(['Cesium'], function (Cesium) {
             })
             return polygonClipHandler
         }
-        function getCameraView() {
+        /**
+         * @param {obj} offset { heightOffset, latitudeOffset, longitudeOffset } UNIT:'M','Radian','Radian'
+         */
+        function getCameraView(offset = {}) {
             let { height, latitude, longitude } = this.camera.positionCartographic
+            height += offset.heightOffset ? offset.heightOffset : 0;
+            latitude += offset.latitudeOffset ? offset.latitudeOffset : 0;
+            longitude += offset.longitudeOffset ? offset.longitudeOffset : 0;
             let pitch = this.camera.pitch
             let heading = this.camera.heading
             let roll = this.camera.roll
@@ -238,6 +266,24 @@ define(['Cesium'], function (Cesium) {
                     roll
                 }
             }
+        }
+        /**
+         * 取地图视图范围返回对角点经纬度  左上 右下
+         * 
+         * 未完
+         */
+        function getExtent() {
+            var pt1 = new Cesium.Cartesian2(0, 0);
+            var pt2 = new Cesium.Cartesian2(map.canvas.width, map.canvas.height);
+            var pick1 = this.globe.pick(this.camera.getPickRay(pt1), map.scene);
+            var pick2 = this.globe.pick(this.camera.getPickRay(pt2), map.scene);
+            //将三维坐标转成地理坐标
+            var geoPt1 = this.globe.ellipsoid.cartesianToCartographic(pick1);
+            var geoPt2 = this.globe.ellipsoid.cartesianToCartographic(pick2);
+            //地理坐标转换为经纬度坐标
+            var lefttop = [geoPt1.longitude / Math.PI * 180, geoPt1.latitude / Math.PI * 180];
+            var rightbottom = [geoPt2.longitude / Math.PI * 180, geoPt2.latitude / Math.PI * 180];
+            return { lefttop, rightbottom }
         }
     }
     function _processPointDraw(result, handler) {
@@ -292,11 +338,6 @@ define(['Cesium'], function (Cesium) {
         option.sceneMode && (option.sceneMode = Cesium.SceneMode[option.sceneMode])
         option.terrainShadows && (option.terrainShadows = Cesium.ShadowMode[option.terrainShadows])
         return option
-    }
-    function _executeOption(option) {
-        if (option.defaultMap !== undefined && option.defaultMap) {
-            !option.defaultMap && this.imageryLayers.removeAll()
-        }
     }
     function _noop() { }
 
