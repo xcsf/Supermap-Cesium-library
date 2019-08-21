@@ -30,6 +30,7 @@ define(['Cesium'], function (Cesium) {
         this.createDrawHandler = createDrawHandler;
         this.createPolygonClipHandler = createPolygonClipHandler;
         this.getCameraView = getCameraView;
+        this.flyToProjectCoordinate = flyToProjectCoordinate;
         /**
          * See http://support.supermap.com.cn:8090/webgl/Build/Documentation/SuperMapImageryProvider.html?classFilter=SuperMapImageryProvider
          * @param {object} option 
@@ -70,8 +71,17 @@ define(['Cesium'], function (Cesium) {
          * See http://support.supermap.com.cn:8090/webgl/Build/Documentation/Scene.html
          * @param {object} url 
          */
-        function addScene(url) {
-            return this.scene.open(url)
+        function addScene(url, dataUrl) {
+            return this.scene.open(url).then(function (layers) {
+                dataUrl && layers.map((layer) => {
+                    let temp = layer.name.split('@')
+                    let url = dataUrl
+                    let dataSetName = temp[0]
+                    let dataSourceName = temp[1]
+                    layer.setQueryParameter({ url, dataSetName, dataSourceName })
+                })
+                return layers
+            })
         }
         /**
          * See http://support.supermap.com.cn:8090/webgl/Build/Documentation/Scene.html
@@ -138,7 +148,7 @@ define(['Cesium'], function (Cesium) {
             }.bind(this), modifier)
         }
         /**
-         * 
+         * 笛卡尔坐标系转84经纬度
          * @param {object} cartesian 
          * @returns {object} {B,L,H}
          */
@@ -230,7 +240,7 @@ define(['Cesium'], function (Cesium) {
          * @param {string} clipMode See http://support.supermap.com.cn:8090/webgl/Build/Documentation/ModifyRegionMode.html
          * @returns handler 
          */
-        function createPolygonClipHandler(layers, clipMode = 'CLIP_INSIDE') {
+        function createPolygonClipHandler(layers, clipMode = 'CLIP_INSIDE', activecallback = _noop) {
             let polygonArray = []
             let regions = [];
             let polygonClipHandler = this.createDrawHandler('Polygon', function (result) {
@@ -244,7 +254,7 @@ define(['Cesium'], function (Cesium) {
                     layer.setModifyRegions(regions, Cesium.ModifyRegionMode[clipMode]);
                 })
                 polygonClipHandler.polygon.show = false;
-            })
+            }, activecallback)
             return polygonClipHandler
         }
         /**
@@ -267,6 +277,7 @@ define(['Cesium'], function (Cesium) {
                 }
             }
         }
+
         /**
          * 取地图视图范围返回对角点经纬度  左上 右下
          * 
@@ -284,6 +295,21 @@ define(['Cesium'], function (Cesium) {
             var lefttop = [geoPt1.longitude / Math.PI * 180, geoPt1.latitude / Math.PI * 180];
             var rightbottom = [geoPt2.longitude / Math.PI * 180, geoPt2.latitude / Math.PI * 180];
             return { lefttop, rightbottom }
+        }
+        /**
+         * @param {object} cartesian3 {x:0,y:0,z:0}
+         * @param {object} option see flyTo(options) http://support.supermap.com.cn:8090/webgl/WebGL_API/webgl_chm/Documentation/Camera.html
+         */
+        function flyToProjectCoordinate(cartesian3, option) {
+            let radBLH = map.scene.mapProjection.unproject(cartesian3);
+            let L = Cesium.Math.toDegrees(radBLH.longitude);
+            let B = Cesium.Math.toDegrees(radBLH.latitude);
+            let destination = Cesium.Cartesian3.fromDegrees(L, B, radBLH.height);
+            // map.camera.lookAt(center, new Cesium.Cartesian3(0.0, 0, 3000.0))
+            let copyOption = {}
+            option && (copyOption = option)
+            copyOption.destination = destination
+            this.camera.flyTo(copyOption);
         }
     }
     function _processPointDraw(result, handler) {
