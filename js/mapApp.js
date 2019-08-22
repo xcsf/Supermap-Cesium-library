@@ -31,6 +31,13 @@ define(['Cesium'], function (Cesium) {
         this.createPolygonClipHandler = createPolygonClipHandler;
         this.getCameraView = getCameraView;
         this.flyToProjectCoordinate = flyToProjectCoordinate;
+        this.ProjectCoordinateToCartesian = ProjectCoordinateToCartesian;
+        this.getMapCenter = getMapCenter;
+        this.restrictedView = restrictedView;
+        this.findLayersBydatasource = findLayersBydatasource;
+        this.hideTile3DLayers = hideTile3DLayers;
+        this.showTile3DLayers = showTile3DLayers;
+
         /**
          * See http://support.supermap.com.cn:8090/webgl/Build/Documentation/SuperMapImageryProvider.html?classFilter=SuperMapImageryProvider
          * @param {object} option 
@@ -156,6 +163,7 @@ define(['Cesium'], function (Cesium) {
             let B, L, H
             if (cartesian) {
                 let cartographic = Cesium.Cartographic.fromCartesian(cartesian)
+                console.log(cartographic)
                 B = Cesium.Math.toDegrees(cartographic.latitude);
                 L = Cesium.Math.toDegrees(cartographic.longitude);
                 H = cartographic.height;
@@ -268,6 +276,7 @@ define(['Cesium'], function (Cesium) {
             let pitch = this.camera.pitch
             let heading = this.camera.heading
             let roll = this.camera.roll
+            // console.log(this.camera.position) //camera.position为投影坐标系
             return {
                 destination: this.Cesium.Cartesian3.fromRadians(longitude, latitude, height),
                 orientation: {
@@ -277,17 +286,16 @@ define(['Cesium'], function (Cesium) {
                 }
             }
         }
-
         /**
          * 取地图视图范围返回对角点经纬度  左上 右下
          * 
          * 未完
          */
-        function getExtent() {
+        function getMapExtent() {
             var pt1 = new Cesium.Cartesian2(0, 0);
-            var pt2 = new Cesium.Cartesian2(map.canvas.width, map.canvas.height);
-            var pick1 = this.globe.pick(this.camera.getPickRay(pt1), map.scene);
-            var pick2 = this.globe.pick(this.camera.getPickRay(pt2), map.scene);
+            var pt2 = new Cesium.Cartesian2(this.canvas.width, this.canvas.height);
+            var pick1 = this.globe.pick(this.camera.getPickRay(pt1), this.scene);
+            var pick2 = this.globe.pick(this.camera.getPickRay(pt2), this.scene);
             //将三维坐标转成地理坐标
             var geoPt1 = this.globe.ellipsoid.cartesianToCartographic(pick1);
             var geoPt2 = this.globe.ellipsoid.cartesianToCartographic(pick2);
@@ -297,19 +305,75 @@ define(['Cesium'], function (Cesium) {
             return { lefttop, rightbottom }
         }
         /**
-         * @param {object} cartesian3 {x:0,y:0,z:0}
+         * @param {object} cartesian3 {x:0,y:0,z:0} ProjectCoordinate
          * @param {object} option see flyTo(options) http://support.supermap.com.cn:8090/webgl/WebGL_API/webgl_chm/Documentation/Camera.html
          */
         function flyToProjectCoordinate(cartesian3, option) {
-            let radBLH = map.scene.mapProjection.unproject(cartesian3);
+            let radBLH = this.scene.mapProjection.unproject(cartesian3);
             let L = Cesium.Math.toDegrees(radBLH.longitude);
             let B = Cesium.Math.toDegrees(radBLH.latitude);
             let destination = Cesium.Cartesian3.fromDegrees(L, B, radBLH.height);
-            // map.camera.lookAt(center, new Cesium.Cartesian3(0.0, 0, 3000.0))
+            // this.camera.lookAt(center, new Cesium.Cartesian3(0.0, 0, 3000.0))
             let copyOption = {}
             option && (copyOption = option)
             copyOption.destination = destination
             this.camera.flyTo(copyOption);
+        }
+        function ProjectCoordinateToCartesian(x, y, z) {
+            let point = new Cesium.Cartesian3(x, y, z);
+            let radBLH = this.scene.mapProjection.unproject(point);
+            let L = Cesium.Math.toDegrees(radBLH.longitude);
+            let B = Cesium.Math.toDegrees(radBLH.latitude);
+            let cartesian = Cesium.Cartesian3.fromDegrees(L, B, radBLH.height);
+            return cartesian
+        }
+        /**
+         * 获取地图视图当前中心位置的坐标
+         */
+        function getMapCenter() {
+            let cartesian = this.camera.pickEllipsoid(new Cesium.Cartesian2(this.canvas.clientWidth / 2, this.canvas.clientHeight / 2));
+            let cartographic = Cesium.Cartographic.fromCartesian(cartesian)
+            return cartographic;
+        }
+        /**
+         * 矩形限定视相机位置
+         * @param {object} rectangle http://support.supermap.com.cn:8090/webgl/WebGL_API/webgl_chm/Documentation/Rectangle.html
+         * @return A function that will remove this event listener when invoked.
+         * http://support.supermap.com.cn:8090/webgl/WebGL_API/webgl_chm/Documentation/Event.html
+         */
+        function restrictedView(rectangle) {
+            // let r = new Cesium.Rectangle(0.012980446876886686, 0.0003970090952860756, 0.027238083608254474, 0.008689209673973042)
+            return this.camera.changed.addEventListener(function () {
+                // let { height, latitude, longitude } = this.camera.positionCartographic
+                if (!Cesium.Rectangle.contains(rectangle, this.camera.positionCartographic)) {
+                    this.viewer.flyTo(this.imageryLayers.get(0), { duration: 1 })
+                }
+            }, this)
+        }
+        /**
+         *  PS:数据处理时 默认分隔符为 @
+         * @param {string} datasource  datasource name
+         */
+        function findLayersBydatasource(datasource) {
+            let tile3DLayers = new Array();
+            this.tile3DLayerArray.map(function (layer) {
+                let curDataSource = layer.name.split('@')[1]
+                if (curDataSource === datasource) {
+                    tile3DLayers.push(layer)
+                }
+            })
+            return tile3DLayers;
+        }
+
+        function hideTile3DLayers(tile3DLayers) {
+            tile3DLayers.map(function (layer) {
+                layer.visible = false
+            })
+        }
+        function showTile3DLayers(tile3DLayers) {
+            tile3DLayers.map(function (layer) {
+                layer.visible = true
+            })
         }
     }
     function _processPointDraw(result, handler) {
