@@ -1,7 +1,6 @@
 define(['Cesium'], function (Cesium) {
     function constructor(option) {
         //Constructor
-        this.Color = Cesium.Color
         //Object
         this.option = _processOption(option);
         this.Cesium = Cesium;
@@ -98,8 +97,8 @@ define(['Cesium'], function (Cesium) {
          * name String (必须) 图层名
          */
         function addS3MTilesLayerByScp(option) {
-            let { url, index } = option
-            return this.scene.addS3MTilesLayerByScp(url, option, index)
+            // let { url, index } = option
+            // return this.scene.addS3MTilesLayerByScp(url, option, index)
         }
         /**
          * http://support.supermap.com.cn:8090/webgl/Build/Documentation/S3MTilesLayer.html
@@ -108,7 +107,7 @@ define(['Cesium'], function (Cesium) {
          * @param {object} option 
          */
         function setS3MTilesLayerStyle3D(layer, option) {
-            var style3D = new Cesium.Style3D();
+            let style3D = new Cesium.Style3D();
             _mergeOption(style3D, option)
             // if (option.color) {
             //     let { red, green, blue, alpha } = option.color
@@ -292,16 +291,16 @@ define(['Cesium'], function (Cesium) {
          * 未完
          */
         function getMapExtent() {
-            var pt1 = new Cesium.Cartesian2(0, 0);
-            var pt2 = new Cesium.Cartesian2(this.canvas.width, this.canvas.height);
-            var pick1 = this.globe.pick(this.camera.getPickRay(pt1), this.scene);
-            var pick2 = this.globe.pick(this.camera.getPickRay(pt2), this.scene);
+            let pt1 = new Cesium.Cartesian2(0, 0);
+            let pt2 = new Cesium.Cartesian2(this.canvas.width, this.canvas.height);
+            let pick1 = this.globe.pick(this.camera.getPickRay(pt1), this.scene);
+            let pick2 = this.globe.pick(this.camera.getPickRay(pt2), this.scene);
             //将三维坐标转成地理坐标
-            var geoPt1 = this.globe.ellipsoid.cartesianToCartographic(pick1);
-            var geoPt2 = this.globe.ellipsoid.cartesianToCartographic(pick2);
+            let geoPt1 = this.globe.ellipsoid.cartesianToCartographic(pick1);
+            let geoPt2 = this.globe.ellipsoid.cartesianToCartographic(pick2);
             //地理坐标转换为经纬度坐标
-            var lefttop = [geoPt1.longitude / Math.PI * 180, geoPt1.latitude / Math.PI * 180];
-            var rightbottom = [geoPt2.longitude / Math.PI * 180, geoPt2.latitude / Math.PI * 180];
+            let lefttop = [geoPt1.longitude / Math.PI * 180, geoPt1.latitude / Math.PI * 180];
+            let rightbottom = [geoPt2.longitude / Math.PI * 180, geoPt2.latitude / Math.PI * 180];
             return { lefttop, rightbottom }
         }
         /**
