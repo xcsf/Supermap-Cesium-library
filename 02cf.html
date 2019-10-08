@@ -1,0 +1,862 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
+    <title>例子</title>
+
+    <link href="../Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+    <link href="./css/pretty.css" rel="stylesheet">
+    <script src="./js/jquery.min.js"></script>
+    <script src="./js/config.js"></script>
+    <script src="./js/bootstrap.min.js"></script>
+    <script src="./js/bootstrap-select.min.js"></script>
+    <script src="./js/bootstrap-treeview.js"></script>
+    <script src="./js/spectrum.js"></script>
+    <script type="text/javascript" src="./js/require.min.js" data-main="js/main"></script>
+    <style>
+        #play {
+            content: url(./images/play.png);
+            height: 30px;
+            padding: 5px;
+        }
+
+        #pause {
+            content: url(./images/pause.png);
+            height: 30px;
+            padding: 5px;
+        }
+
+        #stop {
+            content: url(./images/stop.png);
+            height: 30px;
+            padding: 5px;
+        }
+
+        .bootstrap-select {
+            width: 150px;
+        }
+
+        .li_hover{
+            background-color: rgba(0,0,0,0.2);
+        }
+
+        #header_nav_div_right ul li:hover{
+            background-color: rgba(0,0,0,0.2);
+        }
+
+        .glyphicon-minus:before {
+            content: "\2212";
+        }
+        :after, :before {
+            box-sizing: border-box;
+            -webkit-box-sizing: border-box;
+            -moz-box-sizing: border-box;
+        }
+        .glyphicon-plus:before {
+            content: "\002b";
+        }
+    </style>
+</head>
+<body>
+<!--头部导航#3c8dbc;-->
+<header style="display: block; box-sizing: border-box; background-color: rgb(99,115,64);">
+    <nav style="background-color: rgba(38, 38, 38, 0.75); font-size: 16px;transition: margin-left .3s ease-in-out;margin-bottom: 0;margin-left: 0; border: none;min-height: 60px;border-radius: 0; z-index: 1000; display: block;">
+        <div>
+            <div style="margin: 0 16px; padding-left: 50px; background: url(./images/iclient-9d-icon.png) no-repeat center left; float: left;">
+                <a style="height: 60px; line-height: 60px; padding: 0;">
+                    <span style="font-size: 24px; color: #FFFFFF; vertical-align: middle;">深圳市春风隧道项目</span>
+                </a>
+            </div>
+
+            <div id="header_nav_div_right" style="float: right;">
+                <ul style="margin: 0;">
+                    <li style="float: left; height: 60px; display: table; " id="jlshow">
+                        <a style="padding: 10px; display: table-cell; vertical-align: bottom; color: #fff; line-height: 20px; ">卷帘</a>
+                    </li>
+                    <li style="float: left; height: 60px; display: table; " id="boxbqshow">
+                        <a style="padding: 10px; display: table-cell; vertical-align: bottom; color: #fff; line-height: 20px; ">BOX剖切</a>
+                    </li>
+                    <li style="float: left; height: 60px; display: table; " id="fxmyshow">
+                        <a style="padding: 10px; display: table-cell; vertical-align: bottom; color: #fff; line-height: 20px; ">飞行漫游</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+</header>
+<!--头部导航 end-->
+<div id='tool-menu' class='tool-menu' style="top: 66px; z-index: 10000;">
+    <a data-toggle='dropdown' id='layerMangerBtn' title='图层管理' class='tool-menu-btn tool-menu-btn-inverse'>
+        <span class='smicon-layerlist tool-menu-btn-icon'></span>
+        <div class="dropDown-container treeview-dropDown-container" id="treeContainer">
+            <div id='layerTree'></div>
+        </div>
+    </a>
+</div>
+<div id="toolbar5" class="param-container tool-bar" style="left:60px;top: 66px;z-index: 999;">
+    <div>
+        <label style="color:#FFFFFF ">地表透明:</label> <input type="range" style="width: 65%" min="0" max="1" step="0.02" title="调整地表影像图层透明度" data-bind="value: overGroundAlpha, valueUpdate: 'input'">
+    </div>
+</div>
+
+<div id="cesiumContainer" style="height: calc(100% - 60px);">
+    <div id="vertical-slider"  style="display: none; top: 62px;" ></div>
+    <div id="horizontal-slider" style="display: none;"></div> <!-- 初始时用了左右卷帘 -->
+</div>
+
+<div id="tool-bar2" class="param-container"  style="position: absolute; right:120px; top: 66px; z-index: 10000; display:none; height: 500px; overflow-y: auto;">
+    <div>
+        <span>参与卷帘图层</span>
+        <ul id="layer-list" style="padding: 0;margin: 0.5rem 0;">
+        </ul>
+    </div>
+    <div class="divider"></div>
+    <div>
+        <span>卷帘模式</span>
+        <div style="padding: 0;margin: 0.5rem 0;">
+            <div style="margin: 0.2rem 0;">
+                <label><input type="radio" name="roller-category" value="lr-roller" style="vertical-align: middle;"
+                              checked/><span style="vertical-align: middle;">左右卷帘</span></label>
+                <div style="text-indent: 1rem;" id="lr-roller-mode">
+                    <label><input type="radio" name="roller-mode" value="left-roller" style="vertical-align: middle;"
+                                  checked/><span style="vertical-align: middle;">屏蔽左侧</span></label>
+                    <label><input type="radio" name="roller-mode" value="right-roller" style="vertical-align: middle;"/><span
+                            style="vertical-align: middle;">屏蔽右侧</span></label>
+                </div>
+            </div>
+            <div style="margin: 0.2rem 0;">
+                <label><input type="radio" name="roller-category" value="tb-roller"
+                              style="vertical-align: middle;"/><span style="vertical-align: middle;">上下卷帘</span></label>
+                <div style="text-indent: 1rem; display: none;" id="tb-roller-mode">
+                    <label><input type="radio" name="roller-mode" value="top-roller"
+                                  style="vertical-align: middle;"/><span
+                            style="vertical-align: middle;">屏蔽上侧</span></label>
+                    <label><input type="radio" name="roller-mode" value="bottom-roller"
+                                  style="vertical-align: middle;"/><span
+                            style="vertical-align: middle;">屏蔽下侧</span></label>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div id='toolbar3' class="param-container" style="position: absolute; right:120px; top: 66px; z-index: 10000; display:none;">
+    <button id="addBOX" class="button black">添加裁剪框</button>
+    <div class="param-item">
+        <b>改变长度：</b>
+        <input type="range" id="length" min="1" max="8800" step="2" value="5">
+    </div>
+    <div class="param-item">
+        <b>改变宽度：</b>
+        <input type="range" id="width" min="1" max="8800" step="2" value="5">
+    </div>
+    <div class="param-item">
+        <b>改变高度：</b>
+        <input type="range" id="height" min="1" max="400" step="2" value="5">
+    </div>
+    <div class="param-item">
+        <b>进行旋转：</b>
+        <input type="range" id="rotate" min="0" max="360" step="1" value="0">
+    </div>
+
+</div>
+
+<div id='toolbar4' class="param-container" style="position: absolute; right:120px; top: 66px; z-index: 10000; display:none;">
+    <span type="button" id="play" class="button black" title="开始"></span>
+    <span type="button" id="pause" class="button black" title="暂停"></span>
+    <span type="button" id="stop" class="button black" title="停止"></span>
+    <div style="width: 150px;">
+        <select id="stopList" class="form-control" style="width: 100%;">
+            <!--<option disabled selected value>&#45;&#45;选择站点&#45;&#45;</option>-->
+        </select>
+    </div>
+    <div class="checkbox">
+        <label>
+            <input type="checkbox" id="show-line" checked> 显示飞行路线
+        </label>
+    </div>
+    <div class="checkbox">
+        <label>
+            <input type="checkbox" id="show-stop" checked> 显示飞行站点
+        </label>
+    </div>
+</div>
+
+
+
+<div id="bubble" class="bubble" style="bottom:0;left:82%;display:none;" >
+    <div id="tools" style="text-align : right">
+        <span  style="color: rgb(95, 74, 121);padding: 5px;position: absolute;left: 10px;top: 4px;">对象属性</span>
+        <span class="fui-export" id="bubblePosition" style="color: darkgrey; padding:5px" title="停靠"></span>
+        <span  class="fui-cross" title="关闭" id="close" style="color: darkgrey;padding:5px"></span>
+    </div>
+    <div style="overflow-y:scroll;height:150px" id="tableContainer"><table id="tab"></table></div>
+</div>
+<script type="text/javascript">
+    var layerAll;
+    var flyManager;
+    function onload(Cesium) {
+        var viewer = new Cesium.Viewer('cesiumContainer');
+        viewer.scene.undergroundMode = true; //设置开启地下场景
+        viewer.scene.screenSpaceCameraController.minimumZoomDistance = -1000;//设置相机最小缩放距离,距离地表-1000米
+        viewer.scene.terrainProvider.isCreateSkirt = false; // 关闭裙边
+        viewer.scene.camera.frustum.near = 0.01;
+        var infoboxContainer = document.getElementById("bubble");
+        viewer.customInfobox = infoboxContainer;
+
+        var $length = $('#length'), $width = $('#width'), $height = $('#height'),
+            $rotate = $('#rotate');
+        var clipMode ="clip_behind_any_plane";
+
+        var urlscene ='http://127.0.0.1:8090/iserver/services/3D-zhongtiegzkj/rest/realspace';
+        var urldata ='http://127.0.0.1:8090/iserver/services/data-zhongtiegzkj/rest/data';
+
+        try{
+            var promise = viewer.scene.open(urlscene);
+            Cesium.when(promise,function(layers){
+                layerAll=layers;
+
+                var yxLayer=viewer.scene.layers.find('YX@MAX');
+                yxLayer.selectEnabled = false;
+
+                var viewModel = { //监听滑动条变化，改变alpha的值，设置地表透明度
+                    overGroundAlpha : 1
+                };
+                Cesium.knockout.track(viewModel);
+                var toolbar = document.getElementById('toolbar5');
+                Cesium.knockout.applyBindings(viewModel, toolbar);
+                Cesium.knockout.getObservable(viewModel,'overGroundAlpha').subscribe(// 设置地表图层透明度
+                    function(newValue) {
+                        yxLayer.style3D.fillForeColor.alpha = parseFloat(newValue);
+                        viewer.scene.globe.globeAlpha=parseFloat(newValue);
+
+                    }
+                );
+
+
+
+
+                //初始化树形菜单
+                var $tree = $('#layerTree').treeview({
+                    data: [{text : "图层列表",selectable : false}],
+                    showIcon: true,
+                    showCheckbox: true,
+                    backColor : 'transparent',
+                    color : '#fff',
+                    //通过NodeChecked状态设置子图层的显示与隐藏的切换
+                    onNodeChecked : function(evt,node){
+                        if(node.text == "图层列表"){
+                            $tree.treeview('checkAll', { silent: true });
+
+                            setS3MLayleVisible("", true);
+                        }else if(node.text == "卫星影像"){
+                            yxLayer.visible = true;
+                        }else if(node.text == "景观模型"){
+                            var childNodes = node.nodes;
+                            setCheckChildNodes('checkNode', childNodes);
+
+                            setS3MLayleVisible("@景观", true);
+                        }else if(node.text == "BIM模型"){
+                            var childNodes = node.nodes;
+                            setCheckChildNodes('checkNode', childNodes);
+
+                            setS3MLayleVisible("@bim", true);
+                        }else if(node.text == "地质体"){
+                            var childNodes = node.nodes;
+                            setCheckChildNodes('checkNode', childNodes);
+
+                            setS3MLayleVisible("@DIZHI", true);
+                        }else if(node.text == "地下管线"){
+                            var childNodes = node.nodes;
+                            setCheckChildNodes('checkNode', childNodes);
+
+                            setS3MLayleVisible("管线", true);
+                        }else{
+                            setS3MLayleVisible(node.text, true);
+                        }
+                    },
+                    onNodeUnchecked : function(evt,node){
+                        if(node.text == "图层列表"){
+                            $tree.treeview('uncheckAll', { silent: true });
+
+                            setS3MLayleVisible("", false);
+                        }else if(node.text == "卫星影像"){
+                            yxLayer.visible = false;
+                        }else if(node.text == "景观模型"){
+                            var childNodes = node.nodes;
+                            setCheckChildNodes('uncheckNode', childNodes);
+
+                            setS3MLayleVisible("@景观", false);
+                        }else if(node.text == "BIM模型"){
+                            var childNodes = node.nodes;
+
+                            setCheckChildNodes('uncheckNode', childNodes);
+
+                            setS3MLayleVisible("@bim", false);
+                        }else if(node.text == "地质体"){
+                            var childNodes = node.nodes;
+                            setCheckChildNodes('uncheckNode', childNodes);
+
+                            setS3MLayleVisible("@DIZHI", false);
+                        }else if(node.text == "地下管线"){
+                            var childNodes = node.nodes;
+                            setCheckChildNodes('uncheckNode', childNodes);
+
+                            setS3MLayleVisible("管线", false);
+                        }else{
+                            setS3MLayleVisible(node.text, false);
+                        }
+                    }
+                });
+                var rootNode = $tree.treeview('getNode',0);
+                //加载图层
+                $tree.treeview('addNode',[rootNode,{text : "卫星影像",fontSize : '10pt'}]);
+                var jgNode = $tree.treeview('addNode',[rootNode,{text : "景观模型",fontSize : '10pt'}]);
+                datainfo("@景观模型", jgNode);
+                var bimNode = $tree.treeview('addNode',[rootNode,{text : "BIM模型",fontSize : '10pt',state: { checked:false }}]);
+                datainfo("@bim", bimNode);
+                var geoNode = $tree.treeview('addNode',[rootNode,{text : "地质体",fontSize : '10pt',state: { checked:false }}]);
+                datainfo("@DIZHI", geoNode);
+				var geoLineNade = $tree.treeview('addNode',[rootNode,{text : "地下管线",fontSize : '10pt',state: { checked:false }}]);
+				datainfo("管线", geoLineNade);
+				//设置地下图层默认隐藏
+				setCheckChildNodes('uncheckNode', bimNode.nodes);
+				setCheckChildNodes('uncheckNode', geoNode.nodes);
+				setCheckChildNodes('uncheckNode', geoLineNade.nodes);
+				setS3MLayleVisible("管线", false);
+				setS3MLayleVisible("@DIZHI", false);
+				setS3MLayleVisible("@bim", false);
+
+                //加载子图层
+                function datainfo(indexOfName, fNode){
+                    for(var i=0; i<layerAll.length; i++){
+                        var layerName = layerAll[i].name.toString().trim();
+                        var layerNameLastIndex = layerName.lastIndexOf(indexOfName);
+                        if(layerNameLastIndex != -1) {
+                            var layerText = layerName.substring(0, layerNameLastIndex);
+                            $tree.treeview('addNode',[fNode,{text : layerText,fontSize : '10pt'}]);
+                        }
+                    }
+                }
+                //设置子图层显示否
+                function setS3MLayleVisible(indexOfName, bol){
+                    for(var i=0;i<layerAll.length;i++){
+                        if((layerAll[i].name).toString().trim().lastIndexOf(indexOfName) != -1){
+                            layerAll[i].visible = bol;
+                        }
+                    }
+                }
+                //设置子节点勾选否
+                function setCheckChildNodes(eventsName, childNodes){
+                    for(var i=0; i<childNodes.length; i++){
+                        $tree.treeview(eventsName,[childNodes[i].nodeId,{silent:true,ignoreChildren:true}]);
+                    }
+                }
+                /*var ghlayer=viewer.scene.layers.find('规划路');
+                var gx1layer=viewer.scene.layers.find('gx');
+                var gx2layer=viewer.scene.layers.find('gx2');
+                gx1layer.cullEnabled=false;
+                gx2layer.cullEnabled=false;
+				gx1layer.visible = false;
+				gx2layer.visible = false;*/
+
+
+
+                //*********************************卷帘*********************************
+                let windowWidth = $('body').width(); // 窗口宽度
+                let windowHeight = $('body').height(); // 窗口高度
+                let rollerShutterConfig = { // 卷帘配置参数，以对象方式实现地址传递
+                    splitDirection: Cesium.SplitDirection.LEFT,
+                    verticalSplitPosition: windowWidth / 2,
+                    horizontalSplitPosition: windowHeight / 2,
+                    splitLayers: [], // 参与卷帘的S3M图层名
+                    wholeLayers: [], // 所有S3M图层的名称
+                    latestSplitDirection: null // 用于在禁用卷帘后恢复之前的卷帘方向
+                };
+                for (var layer of layers) {
+                    // 添加图层列表 供选择参与卷帘的图层
+                    $("#layer-list").append('<li style="margin: 0.2rem 0;"><label style="vertical-align: middle;"><input id="'+layer.name+'" name="layer" type="checkbox" value="'+layer.name+'" style="vertical-align: middle;" checked/>'+layer.name+'</label></li>');
+
+                    rollerShutterConfig.splitLayers.push(layer.name); // 初始时所有S3M图层都参与卷帘
+                    rollerShutterConfig.wholeLayers.push(layer.name);
+                }
+                cdLayer=yxLayer;
+                var ellipsoid=viewer.scene.globe.ellipsoid;
+                var cartographic=Cesium.Cartographic.fromDegrees(cdLayer.lon,cdLayer.lat,cdLayer.height);
+                cartesian3=ellipsoid.cartographicToCartesian(cartographic);
+                var cd=Math.abs((cdLayer.layerBounds.east-cdLayer.layerBounds.west)/ Math.PI * 180*111000);
+                var kd=Math.abs((cdLayer.layerBounds.north-cdLayer.layerBounds.south)/ Math.PI * 180*111000);
+                $length.val(cd);
+                $width.val(kd);
+                $height.val(cdLayer.MaxHeight);
+                $length.bind('input propertychange', function () {
+                    if (!boxEntity) {
+                        return;
+                    }
+                    var dim = boxEntity.box.dimensions.getValue();
+                    var newValue = Number($(this).val());
+                    boxEntity.box.dimensions = new Cesium.Cartesian3(newValue, dim.y, dim.z);
+                    setClipBox();
+                });
+                $width.bind('input propertychange', function () {
+                    if (!boxEntity) {
+                        return;
+                    }
+                    var dim = boxEntity.box.dimensions.getValue();
+                    var newValue = Number($(this).val());
+                    boxEntity.box.dimensions = new Cesium.Cartesian3(dim.x, newValue, dim.z);
+                    setClipBox();
+                });
+                $height.bind('input propertychange', function () {
+                    if (!boxEntity) {
+                        return;
+                    }
+                    var dim = boxEntity.box.dimensions.getValue();
+                    var newValue = Number($(this).val());
+                    boxEntity.box.dimensions = new Cesium.Cartesian3(dim.x, dim.y, newValue);
+                    setClipBox();
+                });
+                $rotate.bind('input propertychange', function () {
+                    if (!boxEntity) {
+                        return;
+                    }
+                    var position = boxEntity.position.getValue(0);
+                    var newValue = Number($(this).val());
+                    var rotate = Cesium.Math.toRadians(newValue);
+                    var hpr = new Cesium.HeadingPitchRoll(rotate, 0, 0);
+                    var orientation = Cesium.Transforms.headingPitchRollQuaternion(position, hpr);
+                    boxEntity.orientation = orientation;
+                    setClipBox();
+                });
+                function setClipBox() {
+                    var newDim = boxEntity.box.dimensions.getValue();
+                    var position = boxEntity.position.getValue(0);
+                    var heading = Cesium.Math.toRadians($rotate.val());
+                    var boxOptions = {
+                        dimensions: newDim,
+                        position: position,
+                        clipMode: clipMode,
+                        heading: heading
+                    };
+                    setAllLayersClipOptions(boxOptions);
+                }
+                function setAllLayersClipOptions(boxOptions) {
+                    for (var i = 0, j = layers.length; i < j; i++) {
+                        layers[i].setCustomClipBox(boxOptions);
+                    }
+                }
+                //卷帘点击事件
+                var jlshowbol = true;
+                rollerShutterConfig.latestSplitDirection = rollerShutterConfig.splitDirection;
+                rollerShutterConfig.splitDirection = Cesium.SplitDirection.NONE;
+                $("#jlshow").on("click",function(){
+                    let verticalSlider = document.getElementById('vertical-slider');
+                    let horizontalSlider = document.getElementById('horizontal-slider');
+                    if(jlshowbol){
+                        $("#jlshow").addClass("li_hover");
+                        jlshowbol = false;
+
+                        $("#tool-bar2").show();
+                        $("#vertical-slider").show();
+                        if (rollerShutterConfig.latestSplitDirection === Cesium.SplitDirection.LEFT ||
+                            rollerShutterConfig.latestSplitDirection === Cesium.SplitDirection.RIGHT) {
+                            verticalSlider.style.display = 'block';
+                            horizontalSlider.style.display = 'none';
+                        } else {
+                            verticalSlider.style.display = 'none';
+                            horizontalSlider.style.display = 'block';
+                        }
+                        rollerShutterConfig.splitDirection = rollerShutterConfig.latestSplitDirection;
+                        initRollerShutter(viewer.scene, rollerShutterConfig);
+                        viewer.scene.globe.globeAlpha = 0.5;
+                    }else{
+                        $("#jlshow").removeClass("li_hover");
+                        jlshowbol = true;
+
+                        $("#tool-bar2").hide();
+                        $("#vertical-slider").hide();
+                        $("#horizontal-slider").hide();
+                        rollerShutterConfig.latestSplitDirection = rollerShutterConfig.splitDirection;
+                        rollerShutterConfig.splitDirection = Cesium.SplitDirection.NONE;
+                        verticalSlider.style.display = 'none';
+                        horizontalSlider.style.display = 'none';
+                        viewer.scene.globe.globeAlpha = 1.0;
+                    }
+                    setRollerShutterSplit(viewer.scene, rollerShutterConfig);
+                });
+                //*********************************卷帘 End*********************************
+
+                //*********************************飞行漫游*********************************
+                var routes = new Cesium.RouteCollection(viewer.entities);
+                //添加fpf飞行文件，fpf由SuperMap iDesktop生成
+                var fpfUrl = './SampleData/fpf/dishang.fpf';
+                routes.fromFile(fpfUrl);
+                //初始化飞行管理
+                var flyManager = new Cesium.FlyManager({
+                    scene: viewer.scene,
+                    routes: routes
+                });
+                //注册站点到达事件
+                flyManager.stopArrived.addEventListener(function (routeStop) {
+                    routeStop.waitTime = 0; // 在每个站点处停留1s
+                });
+                flyManager.readyPromise.then(function () { // 飞行路线就绪
+                    var currentRoute = flyManager.currentRoute;
+                    currentRoute.isLineVisible = false;
+                    currentRoute.isStopVisible = false;
+                    //生成飞行文件中的所有站点列表
+                    var allStops = flyManager.getAllRouteStops();
+                    var menu = document.getElementById('stopList');
+                    for (var i = 0, j = allStops.length; i < j; i++) {
+                        var option = document.createElement('option');
+                        option.innerHTML = "站点 " + (i + 1);
+                        option.value = allStops[i].index;
+                        menu.appendChild(option);
+                    }
+
+                    $('#stopList').change(function () { //注册站点切换事件
+                        flyManager && flyManager.stop();
+                        var index = parseInt($(this).val()); // 站点的索引
+                        var route = flyManager.currentRoute;
+                        var stop = route.get(index);
+                        flyManager.currentStopIndex = index;
+                        flyManager.viewToStop(stop);
+                    });
+
+                    $('#play').click(function () {
+                        flyManager && flyManager.play();
+                    });
+                    $('#pause').click(function () {
+                        flyManager && flyManager.pause();
+                    });
+                    $('#stop').click(function () {
+                        flyManager && flyManager.stop();
+                    });
+
+                    $('#show-line').change(function(){
+                        currentRoute.isLineVisible = $(this).prop('checked');
+                    });
+
+                    $('#show-stop').change(function(){
+                        currentRoute.isStopVisible = $(this).prop('checked');
+                    });
+                });
+                //飞行漫游点击事件
+                var fxmyshowbol = true;
+                $("#fxmyshow").on("click",function(){
+                    if(fxmyshowbol){
+                        $("#fxmyshow").addClass("li_hover");
+                        fxmyshowbol = false;
+
+                        $("#toolbar4").show();
+
+                    }else{
+                        $("#fxmyshow").removeClass("li_hover");
+                        fxmyshowbol = true;
+
+                        $("#toolbar4").hide();
+                    }
+                });
+                //*********************************飞行漫游 End*********************************
+
+
+                //*********************************BOX剖切*********************************
+                // 设置裁剪线颜色
+                setAllLayersClipColor();
+                function setAllLayersClipColor() {
+                    for (var i = 0, j = layers.length; i < j; i++) {
+                        layers[i].clipLineColor = new Cesium.Color(1, 1, 1, 0);
+                    }
+                }
+                var boxEntity = undefined;
+                $("#addBOX").on("click", function () {
+                    $length.value=cd;
+                    $width.value=kd;
+                    $height.value=cdLayer.MaxHeight;
+
+                    var length = Number($length.val());
+                    var width = Number($width.val());
+                    var height = Number($height.val());
+
+                    var rotate = parseFloat($rotate.val());
+                    // 获取鼠标点击的笛卡尔坐标
+                    var boxOption = {
+                        dimensions: new Cesium.Cartesian3(length, width, height),
+                        position: cartesian3,
+                        clipMode: clipMode,
+                        heading: rotate
+                    };
+                    var hpr = new Cesium.HeadingPitchRoll(rotate, 0, 0);
+                    var orientation = Cesium.Transforms.headingPitchRollQuaternion(cartesian3, hpr);
+                    boxEntity = viewer.entities.add({
+                        box: {
+                            dimensions: new Cesium.Cartesian3(length, width, height),
+                            material: Cesium.Color.fromRandom({alpha:0})
+                        },
+                        position: cartesian3,
+                        orientation: orientation
+                    });
+                    setAllLayersClipOptions(boxOption);
+                });
+                //box剖切点击事件
+                var boxbqshowbol = true;
+                $("#boxbqshow").on("click",function(){
+                    if(boxbqshowbol){
+                        $("#boxbqshow").addClass("li_hover");
+                        boxbqshowbol = false;
+
+                        $("#toolbar3").show();
+
+                    }else{
+                        $("#boxbqshow").removeClass("li_hover");
+                        boxbqshowbol = true;
+
+                        $("#toolbar3").hide();
+                        if (!boxEntity) {
+                            return;
+                        }
+                        var dim = boxEntity.box.dimensions.getValue();
+                        boxEntity.box.dimensions = new Cesium.Cartesian3(2000,2000,2000);
+                        setClipBox();
+                        boxEntity.show=false;
+                        viewer.entities.remove(boxEntity);
+                        for (var i = 0, j = layers.length; i < j; i++) {
+                            layers[i].clearCustomClipBox();
+                        }
+                    }
+                });
+                //*********************************BOX剖切 End*********************************
+
+                //BIM模型查询参数设置
+                for(var i=0;i<=layers.length;i++) {
+                    if ((layers[i].name).toString().indexOf("bim") != -1) {
+                        layers[i].setQueryParameter({
+                            url: urldata,
+                            dataSourceName: 'bim',
+                            dataSetName: layers[i].name.replace('@bim',''),
+                            keyWord: 'SmID'
+                        });
+                    }
+                }
+
+            },function(e){
+                if (viewer.cesiumWidget._showRenderLoopErrors) {
+                    var title = '加载SCP失败，请检查网络连接状态或者url地址是否正确？';
+                    viewer.cesiumWidget.showErrorPanel(title, undefined, e);
+                }
+            });
+        }
+        catch(e){
+            if (viewer.cesiumWidget._showRenderLoopErrors) {
+                var title = '渲染时发生错误，已停止渲染。';
+                viewer.cesiumWidget.showErrorPanel(title, undefined, e);
+            }
+        }
+
+        //点击对象查询对象属性
+        var table = document.getElementById("tab");
+        viewer.pickEvent.addEventListener(function(feature){
+            $("#bubble").show();
+            for (i = table.rows.length-1;i > -1;i--){
+                table.deleteRow(i);
+            }
+            for(var key in feature ){
+                var newRow = table.insertRow();
+                var cell1 = newRow.insertCell();
+                var cell2 = newRow.insertCell();
+                cell1.innerHTML = key;
+                cell2.innerHTML = feature[key];
+            }
+        });
+        $("#bubblePosition").click(function(){
+            if($("#bubblePosition").hasClass("fui-export")){
+                viewer.customInfobox = undefined;
+                $("#bubble").removeClass("bubble").addClass("float");
+                $("#bubblePosition").removeClass("fui-export").addClass("fui-bubble");
+                $("#bubblePosition")[0].title = "悬浮";
+                $("#bubble").css({'left' : '82%','bottom' : '45%'});
+                $("#tableContainer").css({'height':'350px'});
+            }
+            else if($("#bubblePosition").hasClass("fui-bubble")){
+                $("#bubble").removeClass("float").addClass("bubble");
+                $("#bubblePosition").removeClass("fui-bubble").addClass("fui-export");
+                $("#bubblePosition")[0].title = "停靠";
+                $("#tableContainer").css({'height':'150px'});
+                viewer.customInfobox = infoboxContainer;
+            }
+        });
+        $("#close").click(function(){
+            $("#bubble").hide();
+        });
+
+
+        /**
+         * 初始化卷帘。设置分割条初始位置及绑定相关事件。
+         * @param scene 场景。
+         * @param rollerShutterConfig 卷帘配置参数。
+         */
+        function initRollerShutter(scene, rollerShutterConfig) {
+            setRollerShutterSplit(scene, rollerShutterConfig);
+            bindSliderEvt(scene, rollerShutterConfig);
+            $('input[type=radio][name="roller-mode"]').on('input propertychange', function () {
+                let splitDirectionCustomStr = $('input[type=radio][name="roller-mode"]:checked').val();
+                switch (splitDirectionCustomStr) {
+                    case 'left-roller':
+                        rollerShutterConfig.splitDirection = Cesium.SplitDirection.LEFT;
+                        break;
+                    case 'right-roller':
+                        rollerShutterConfig.splitDirection = Cesium.SplitDirection.RIGHT;
+                        break;
+                    case 'top-roller':
+                        rollerShutterConfig.splitDirection = Cesium.SplitDirection.TOP;
+                        break;
+                    case 'bottom-roller':
+                        rollerShutterConfig.splitDirection = Cesium.SplitDirection.BOTTOM;
+                        break;
+                    default:
+                        break;
+                }
+                setRollerShutterSplit(scene, rollerShutterConfig);
+            });
+
+            // 在 “左右模式” 和 “上下模式” 之间切换
+            $('input[type=radio][name="roller-category"]').on("input propertychange", function () {
+                let splitDirectionCategory = $('input[type=radio][name="roller-category"]:checked').val();
+                let verticalSlider = document.getElementById('vertical-slider');
+                let horizontalSlider = document.getElementById('horizontal-slider');
+                switch (splitDirectionCategory) {
+                    case 'lr-roller':
+                        verticalSlider.style.display = 'block';
+                        horizontalSlider.style.display = 'none';
+                        $("#lr-roller-mode").css("display", "block");
+                        $("#tb-roller-mode").css("display", "none");
+                        rollerShutterConfig.splitDirection = Cesium.SplitDirection.LEFT;
+                        $("input[type=radio][value='left-roller']").prop("checked", "checked");
+                        break;
+                    case 'tb-roller':
+                        verticalSlider.style.display = 'none';
+                        horizontalSlider.style.display = 'block';
+                        $("#lr-roller-mode").css("display", "none");
+                        $("#tb-roller-mode").css("display", "block");
+                        rollerShutterConfig.splitDirection = Cesium.SplitDirection.TOP;
+                        $("input[type=radio][value='top-roller']").prop("checked", "checked");
+                        break;
+                    default:
+                        break;
+                }
+                setRollerShutterSplit(scene, rollerShutterConfig);
+            });
+
+            // 控制图层是否参与卷帘
+            $('input[type=checkbox][name="layer"]').on("input propertychange", function () {
+                let operationLayerName = $(this).val();
+                if ($(this).prop("checked")) { // 图层参与卷帘
+                    rollerShutterConfig.splitLayers.push(operationLayerName);
+                } else {
+                    var index = rollerShutterConfig.splitLayers.indexOf(operationLayerName);
+                    rollerShutterConfig.splitLayers.splice(index, 1);
+                }
+                setRollerShutterSplit(scene, rollerShutterConfig);
+            });
+
+
+        }
+
+        /**
+         * 注册卷帘分割条的拖拽事件。
+         * @param scene 场景。
+         * @param rollerShutterConfig 卷帘配置参数。
+         */
+        function bindSliderEvt(scene, rollerShutterConfig) {
+            let verticalSlider = document.getElementById('vertical-slider'); // 垂直分割条
+            let horizontalSlider = document.getElementById('horizontal-slider'); // 水平分割条
+            verticalSlider.addEventListener('mousedown', mouseDown, false);
+            horizontalSlider.addEventListener('mousedown', mouseDown, false);
+            let windowWidth = $('body').width();
+            let windowHeight = $('body').height();
+            document.addEventListener('mouseup', mouseUp, false);
+            function mouseUp(e) {
+                document.removeEventListener('mousemove', sliderMove, false);
+            }
+            function mouseDown(e) {
+                document.addEventListener('mousemove', sliderMove, false);
+            }
+            function sliderMove(e) { // 鼠标拖拽时执行
+                // 解决拖拽鼠标粘滞的问题
+                if (e.preventDefault) {
+                    e.preventDefault();
+                } else {
+                    e.returnValue = false;
+                }
+                if (rollerShutterConfig.splitDirection === Cesium.SplitDirection.LEFT || rollerShutterConfig.splitDirection === Cesium.SplitDirection.RIGHT) {
+                    verticalSlider.style.left = e.clientX + 'px';
+                    rollerShutterConfig.verticalSplitPosition = e.clientX;
+                } else if (rollerShutterConfig.splitDirection === Cesium.SplitDirection.TOP || rollerShutterConfig.splitDirection === Cesium.SplitDirection.BOTTOM) {
+                    let clientY = e.clientY;
+                    if (clientY < 0) {
+                        clientY = 0;
+                    } else if (clientY > windowHeight) {
+                        clientY = windowHeight - $('#horizontal-slider').height();
+                    }
+                    horizontalSlider.style.top = clientY + 'px';
+                    rollerShutterConfig.horizontalSplitPosition = windowHeight - clientY;
+                }
+                setRollerShutterSplit(scene, rollerShutterConfig);
+            }
+        }
+
+        /**
+         * 设置卷帘的分割方向及分割条的位置。
+         * @param scene 场景。
+         * @param rollerShutterConfig 卷帘配置参数。
+         */
+        function setRollerShutterSplit(scene, rollerShutterConfig) {
+            let splitPosition = null;
+            if (rollerShutterConfig.splitDirection === Cesium.SplitDirection.LEFT || rollerShutterConfig.splitDirection === Cesium.SplitDirection.RIGHT) {
+                splitPosition = rollerShutterConfig.verticalSplitPosition;
+            } else if (rollerShutterConfig.splitDirection === Cesium.SplitDirection.TOP || rollerShutterConfig.splitDirection === Cesium.SplitDirection.BOTTOM) {
+                splitPosition = rollerShutterConfig.horizontalSplitPosition;
+            }
+            for (let layer of scene.layers.layerQueue) {
+                // 判断图层是否是参与卷帘的图层
+                if (rollerShutterConfig.splitLayers.indexOf(layer.name) != -1) {
+                    layer.splitDirection = rollerShutterConfig.splitDirection;
+                    if (splitPosition) { // 如果禁用卷帘就没有必要设置分割位置
+                        layer.splitPosition = splitPosition;
+                    }
+                } else {
+                    layer.splitDirection = Cesium.SplitDirection.NONE;
+                }
+            }
+        }
+
+        //图层列表的隐藏显示
+        $(document).on('click.dropDown-container touchstart.dropDown-container','[data-toggle=dropdown]',function(evt){
+            evt.stopPropagation();
+            var target = evt.target;
+            if(!target.contains(evt.currentTarget) && target.tagName != 'SPAN'){
+                return ;
+            }
+            var $this = $(this), $parent, isActive;
+            var $target = $this.children('div.dropDown-container');
+            if($target.length == 0){
+                $('.dropDown-container').removeClass('dropDown-visible');
+                return ;
+            }
+            isActive = $target.hasClass('dropDown-visible');
+            $('.dropDown-container').removeClass('dropDown-visible');
+            if(!isActive){
+                $target.addClass('dropDown-visible');
+            }
+            return false;
+        });
+        var height = $('body').height()*0.85 + 'px';
+        $('#treeContainer').css({'height' : height,'min-width' : '260px','text-align' : 'left'});
+    }
+</script>
+</body>
+</html>

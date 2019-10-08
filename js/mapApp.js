@@ -2,12 +2,16 @@ define(['Cesium'], function (Cesium) {
     function constructor(option) {
         //Constructor
         //Object
-        this.option = _processOption(option);
+        // this.option = _processOption(option);
+        this.option = option;
         this.Cesium = Cesium;
-        this.viewer = new Cesium.Viewer(option.cesiumContainer, this.option);
-        _mergeOption(this.viewer.scene, this.option)
-        _mergeOption(this.viewer.scene.screenSpaceCameraController, this.option)
+        this.viewer = new Cesium.Viewer(option.viewerConfig.cesiumContainer, this.option.viewerConfig);
+        _mergeOption(this.viewer.scene, this.option.sceneConfig)
+        _mergeOption(this.viewer.scene.globe, this.option.globeConfig)
+        _mergeOption(this.viewer.scene.screenSpaceCameraController, this.option.screenSpaceCameraControllerConfig)
+        this.viewer._cesiumWidget._creditContainer.style.display = "none";
         this.scene = this.viewer.scene;
+        this.scene.sun.show = false
         this.bloomEffect = this.viewer.scene.bloomEffect
         this.camera = this.scene.camera;
         this.canvas = this.scene.canvas;
@@ -15,10 +19,15 @@ define(['Cesium'], function (Cesium) {
         this.tile3DLayers = this.scene.layers
         this.tile3DLayerArray = this.tile3DLayers._layers._array
         this.imageryLayers = this.viewer.imageryLayers;
+        this.imageryLayerArray = this.viewer.imageryLayers._layers;
         //functions
         this.addImageryLayer = addImageryLayer;
+        this.clipImageryLayer = clipImageryLayer;
+        this.cancelClipImageryLayer = cancelClipImageryLayer;
+        this.getShowImageryLayer = getShowImageryLayer;
         this.addTerrainLayer = addTerrainLayer;
         this.addArcgisImageryLayer = addArcgisImageryLayer;
+        this.TiandituImageryLayer = TiandituImageryLayer;
         this.addScene = addScene;
         this.addS3MTilesLayerByScp = addS3MTilesLayerByScp;
         this.setS3MTilesLayerStyle3D = setS3MTilesLayerStyle3D;
@@ -30,7 +39,8 @@ define(['Cesium'], function (Cesium) {
         this.createPolygonClipHandler = createPolygonClipHandler;
         this.getCameraView = getCameraView;
         this.flyToProjectCoordinate = flyToProjectCoordinate;
-        this.ProjectCoordinateToCartesian = ProjectCoordinateToCartesian;
+        this.projectCoordinateToCartesian = projectCoordinateToCartesian;
+        this.cartesianToProjectCoordinate = cartesianToProjectCoordinate;
         this.getMapCenter = getMapCenter;
         this.restrictedView = restrictedView;
         this.findLayersBydatasource = findLayersBydatasource;
@@ -50,6 +60,71 @@ define(['Cesium'], function (Cesium) {
                 index
             );
             return layer
+        }
+        function clipImageryLayer(rectangle) {
+            let clipLayers = this.getShowImageryLayer()
+            if (clipLayers.length > 0) {
+                clipLayers.map((layer) => {
+                    let index = layer._layerIndex;
+                    let url = layer._imageryProvider._url.substring(0, layer._imageryProvider._url.length - 1)
+                    let { alpha, brightness, contrast, gamma, hue, saturation, splitDirection, transperantBackColor, transperantBackColorTolerance } = layer
+                    this.imageryLayers.remove(layer)
+                    let imageryProvider = new Cesium.SuperMapImageryProvider({ url });
+                    let clipLayer = new Cesium.ImageryLayer(imageryProvider, { rectangle });
+                    _mergeImageryStyle(clipLayer, { alpha, brightness, contrast, gamma, hue, saturation, splitDirection, transperantBackColor, transperantBackColorTolerance })
+                    this.imageryLayers.add(clipLayer, index)
+                })
+            }
+            // let { index } = option
+            // let imageryProvider = new Cesium.SuperMapImageryProvider({url:'http://172.18.230.222:8090/iserver/services/map-ugcv5-SZMapExtend/rest/maps/SZMapExtend'});
+            // let layer = new Cesium.ImageryLayer(imageryProvider, {rectangle});
+            // this.imageryLayers.add(layer)
+            // return layer
+        }
+        function cancelClipImageryLayer() {
+            let clipLayers = this.getShowImageryLayer()
+            if (clipLayers.length > 0) {
+                clipLayers.map((layer) => {
+                    let index = layer._layerIndex;
+                    let url = layer._imageryProvider._url.substring(0, layer._imageryProvider._url.length - 1)
+                    let { alpha, brightness, contrast, gamma, hue, saturation, splitDirection, transperantBackColor, transperantBackColorTolerance } = layer
+                    this.imageryLayers.remove(layer)
+                    let imageryProvider = new Cesium.SuperMapImageryProvider({ url });
+                    let noClipLayer = new Cesium.ImageryLayer(imageryProvider);
+                    _mergeImageryStyle(noClipLayer, { alpha, brightness, contrast, gamma, hue, saturation, splitDirection, transperantBackColor, transperantBackColorTolerance })
+                    this.imageryLayers.add(noClipLayer, index)
+                })
+            }
+        }
+        function getShowImageryLayer() {
+            return this.imageryLayerArray.filter(layer => {
+                return layer.show && layer.alpha !== 0
+            })
+        }
+        /**
+         * See http://localhost:8086/examples/tianditu.html
+         * @param {object} option 
+         * @return {ImageryLayer}
+         * See http://localhost:8086/examples/tianditu.html
+         */
+        function TiandituImageryLayer(option) {
+            let { index, mapStyle, tdituToken, isimage } = option
+
+            if (isimage) {
+                this.imageryLayers.addImageryProvider(new Cesium.TiandituImageryProvider({
+                    credit: new Cesium.Credit('天地图全球影像服务     数据来源：国家地理信息公共服务平台 & 四川省测绘地理信息局'),
+                    token: tdituToken
+                }));
+            }
+
+            //初始化天地图全球中文注记服务，并添加至影像图层
+            var labelImagery = new Cesium.TiandituImageryProvider({
+                mapStyle: Cesium.TiandituMapsStyle[mapStyle], //天地图全球中文注记服务（经纬度投影）
+                token: tdituToken
+            });
+            this.imageryLayers.addImageryProvider(labelImagery);
+
+            return labelImagery;
         }
         /**
          * See http://support.supermap.com.cn:8090/webgl/Build/Documentation/ArcGisMapServerImageryProvider.html
@@ -162,13 +237,25 @@ define(['Cesium'], function (Cesium) {
             let B, L, H
             if (cartesian) {
                 let cartographic = Cesium.Cartographic.fromCartesian(cartesian)
-                console.log(cartographic)
+                // console.log(cartographic)
                 B = Cesium.Math.toDegrees(cartographic.latitude);
                 L = Cesium.Math.toDegrees(cartographic.longitude);
                 H = cartographic.height;
                 return { B, L, H }
             }
             return { B, L, H }
+        }
+        /**
+         * 笛卡尔坐标系转84经纬度
+         * @param {object} cartesian 
+         * @returns {object} {B,L,H}
+         */
+        function cartesianToProjectCoordinate(cartesian) {
+            if (cartesian) {
+                let cartographic = Cesium.Cartographic.fromCartesian(cartesian)
+                return map.scene.mapProjection.project(cartographic)
+            }
+            return
         }
         /**
          * See http://support.supermap.com.cn:8090/webgl/Build/Documentation/MeasureHandler.html
@@ -261,6 +348,7 @@ define(['Cesium'], function (Cesium) {
                     layer.setModifyRegions(regions, Cesium.ModifyRegionMode[clipMode]);
                 })
                 polygonClipHandler.polygon.show = false;
+                polygonClipHandler.polyline.show = false
             }, activecallback)
             return polygonClipHandler
         }
@@ -318,7 +406,7 @@ define(['Cesium'], function (Cesium) {
             copyOption.destination = destination
             this.camera.flyTo(copyOption);
         }
-        function ProjectCoordinateToCartesian(x, y, z) {
+        function projectCoordinateToCartesian(x, y, z) {
             let point = new Cesium.Cartesian3(x, y, z);
             let radBLH = this.scene.mapProjection.unproject(point);
             let L = Cesium.Math.toDegrees(radBLH.longitude);
@@ -345,7 +433,7 @@ define(['Cesium'], function (Cesium) {
             return this.camera.changed.addEventListener(function () {
                 // let { height, latitude, longitude } = this.camera.positionCartographic
                 if (!Cesium.Rectangle.contains(rectangle, this.camera.positionCartographic)) {
-                    this.viewer.flyTo(this.imageryLayers.get(0), { duration: 1 })
+                    this.viewer.flyTo(this.imageryLayers.get(1), { duration: 1 })
                 }
             }, this)
         }
@@ -374,6 +462,11 @@ define(['Cesium'], function (Cesium) {
                 layer.visible = true
             })
         }
+    }
+    function _mergeImageryStyle(layer, option) {
+        Object.keys(option).forEach(key => {
+            layer[key] && (layer[key] = option[key])
+        })
     }
     function _processPointDraw(result, handler) {
         return result
