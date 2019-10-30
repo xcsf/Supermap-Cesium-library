@@ -40,12 +40,12 @@ define(['Cesium'], function (Cesium) {
         this.getCameraView = getCameraView;
         this.flyToProjectCoordinate = flyToProjectCoordinate;
         this.projectCoordinateToCartesian = projectCoordinateToCartesian;
-        this.cartesianToProjectCoordinate = cartesianToProjectCoordinate;
         this.getMapCenter = getMapCenter;
         this.restrictedView = restrictedView;
         this.findLayersBydatasource = findLayersBydatasource;
         this.hideTile3DLayers = hideTile3DLayers;
         this.showTile3DLayers = showTile3DLayers;
+        this.getMapExtent = getMapExtent;
 
         /**
          * See http://support.supermap.com.cn:8090/webgl/Build/Documentation/SuperMapImageryProvider.html?classFilter=SuperMapImageryProvider
@@ -246,18 +246,6 @@ define(['Cesium'], function (Cesium) {
             return { B, L, H }
         }
         /**
-         * 笛卡尔坐标系转84经纬度
-         * @param {object} cartesian 
-         * @returns {object} {B,L,H}
-         */
-        function cartesianToProjectCoordinate(cartesian) {
-            if (cartesian) {
-                let cartographic = Cesium.Cartographic.fromCartesian(cartesian)
-                return map.scene.mapProjection.project(cartographic)
-            }
-            return
-        }
-        /**
          * See http://support.supermap.com.cn:8090/webgl/Build/Documentation/MeasureHandler.html
          * @param {string} mode 'Area''Distance''DVH'
          * @param {function} callback(result) -> object measure result
@@ -348,6 +336,7 @@ define(['Cesium'], function (Cesium) {
                     layer.setModifyRegions(regions, Cesium.ModifyRegionMode[clipMode]);
                 })
                 polygonClipHandler.polygon.show = false;
+
                 polygonClipHandler.polyline.show = false
             }, activecallback)
             return polygonClipHandler
@@ -389,7 +378,7 @@ define(['Cesium'], function (Cesium) {
             //地理坐标转换为经纬度坐标
             let lefttop = [geoPt1.longitude / Math.PI * 180, geoPt1.latitude / Math.PI * 180];
             let rightbottom = [geoPt2.longitude / Math.PI * 180, geoPt2.latitude / Math.PI * 180];
-            return { lefttop, rightbottom }
+            return { geoPt1, geoPt2 }
         }
         /**
          * @param {object} cartesian3 {x:0,y:0,z:0} ProjectCoordinate
@@ -428,12 +417,12 @@ define(['Cesium'], function (Cesium) {
          * @return A function that will remove this event listener when invoked.
          * http://support.supermap.com.cn:8090/webgl/WebGL_API/webgl_chm/Documentation/Event.html
          */
-        function restrictedView(rectangle) {
+        function restrictedView(restrictedViewRectangle, homeViewRectangle) {
             // let r = new Cesium.Rectangle(0.012980446876886686, 0.0003970090952860756, 0.027238083608254474, 0.008689209673973042)
             return this.camera.changed.addEventListener(function () {
                 // let { height, latitude, longitude } = this.camera.positionCartographic
-                if (!Cesium.Rectangle.contains(rectangle, this.camera.positionCartographic)) {
-                    this.viewer.flyTo(this.imageryLayers.get(1), { duration: 1 })
+                if (!Cesium.Rectangle.contains(restrictedViewRectangle, this.camera.positionCartographic)) {
+                    this.camera.flyTo({ destination: homeViewRectangle, duration: 1 })
                 }
             }, this)
         }
@@ -508,7 +497,7 @@ define(['Cesium'], function (Cesium) {
      */
     function _mergeOption(target, source, excludeKey = []) {
         for (key in source) {
-            if (excludeKey.indexOf(key) < 0) {
+            if (!excludeKey.includes(key)) {
                 target[key] && (target[key] = source[key])
             }
         }
