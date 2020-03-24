@@ -17,13 +17,13 @@ define(['Cesium'], function (Cesium) {
         this.canvas = this.scene.canvas;
         this.globe = this.scene.globe;
         this.tile3DLayers = this.scene.layers
-        this.tile3DLayerArray = this.tile3DLayers._layers._array
+        this.tile3DLayerArray = this.tile3DLayers.layerQueue
         this.imageryLayers = this.viewer.imageryLayers;
         this.imageryLayerArray = this.viewer.imageryLayers._layers;
         //functions
         this.addImageryLayer = addImageryLayer;
-        this.clipImageryLayer = clipImageryLayer;
-        this.cancelClipImageryLayer = cancelClipImageryLayer;
+        // this.clipImageryLayer = clipImageryLayer;
+        // this.cancelClipImageryLayer = cancelClipImageryLayer;
         this.getShowImageryLayer = getShowImageryLayer;
         this.addTerrainLayer = addTerrainLayer;
         this.addArcgisImageryLayer = addArcgisImageryLayer;
@@ -39,6 +39,7 @@ define(['Cesium'], function (Cesium) {
         this.createPolygonClipHandler = createPolygonClipHandler;
         this.getCameraView = getCameraView;
         this.flyToProjectCoordinate = flyToProjectCoordinate;
+        this.ProjectCoordinateToCartesian = ProjectCoordinateToCartesian;
         this.projectCoordinateToCartesian = projectCoordinateToCartesian;
         this.getMapCenter = getMapCenter;
         this.restrictedView = restrictedView;
@@ -46,7 +47,13 @@ define(['Cesium'], function (Cesium) {
         this.hideTile3DLayers = hideTile3DLayers;
         this.showTile3DLayers = showTile3DLayers;
         this.getMapExtent = getMapExtent;
-
+        this.createTooltip = createTooltip;
+        this.addSceneByConfig = addSceneByConfig;
+        this.anyAxisRotation = anyAxisRotation;
+        this.getDataSourcesByName = getDataSourcesByName;
+        this.addEntityToDataSource = addEntityToDataSource;
+        this.addClickEventToDataSource = addClickEventToDataSource;
+        this.tooltip = this.createTooltip(document.body);
         /**
          * See http://support.supermap.com.cn:8090/webgl/Build/Documentation/SuperMapImageryProvider.html?classFilter=SuperMapImageryProvider
          * @param {object} option 
@@ -59,43 +66,39 @@ define(['Cesium'], function (Cesium) {
                 new Cesium.SuperMapImageryProvider(option),
                 index
             );
+            layer.name = option.name;
             return layer
         }
-        function clipImageryLayer(rectangle) {
-            let clipLayers = this.getShowImageryLayer()
-            if (clipLayers.length > 0) {
-                clipLayers.map((layer) => {
-                    let index = layer._layerIndex;
-                    let url = layer._imageryProvider._url.substring(0, layer._imageryProvider._url.length - 1)
-                    let { alpha, brightness, contrast, gamma, hue, saturation, splitDirection, transperantBackColor, transperantBackColorTolerance } = layer
-                    this.imageryLayers.remove(layer)
-                    let imageryProvider = new Cesium.SuperMapImageryProvider({ url });
-                    let clipLayer = new Cesium.ImageryLayer(imageryProvider, { rectangle });
-                    _mergeImageryStyle(clipLayer, { alpha, brightness, contrast, gamma, hue, saturation, splitDirection, transperantBackColor, transperantBackColorTolerance })
-                    this.imageryLayers.add(clipLayer, index)
-                })
-            }
-            // let { index } = option
-            // let imageryProvider = new Cesium.SuperMapImageryProvider({url:'http://172.18.230.222:8090/iserver/services/map-ugcv5-SZMapExtend/rest/maps/SZMapExtend'});
-            // let layer = new Cesium.ImageryLayer(imageryProvider, {rectangle});
-            // this.imageryLayers.add(layer)
-            // return layer
-        }
-        function cancelClipImageryLayer() {
-            let clipLayers = this.getShowImageryLayer()
-            if (clipLayers.length > 0) {
-                clipLayers.map((layer) => {
-                    let index = layer._layerIndex;
-                    let url = layer._imageryProvider._url.substring(0, layer._imageryProvider._url.length - 1)
-                    let { alpha, brightness, contrast, gamma, hue, saturation, splitDirection, transperantBackColor, transperantBackColorTolerance } = layer
-                    this.imageryLayers.remove(layer)
-                    let imageryProvider = new Cesium.SuperMapImageryProvider({ url });
-                    let noClipLayer = new Cesium.ImageryLayer(imageryProvider);
-                    _mergeImageryStyle(noClipLayer, { alpha, brightness, contrast, gamma, hue, saturation, splitDirection, transperantBackColor, transperantBackColorTolerance })
-                    this.imageryLayers.add(noClipLayer, index)
-                })
-            }
-        }
+        // function clipImageryLayer(rectangle) {
+        //     let clipLayers = this.getShowImageryLayer()
+        //     if (clipLayers.length > 0) {
+        //         clipLayers.map((layer) => {
+        //             let index = layer._layerIndex;
+        //             let url = layer._imageryProvider._url.substring(0, layer._imageryProvider._url.length - 1)
+        //             let { alpha, brightness, contrast, gamma, hue, saturation, splitDirection, transperantBackColor, transperantBackColorTolerance } = layer
+        //             this.imageryLayers.remove(layer)
+        //             let imageryProvider = new Cesium.SuperMapImageryProvider({ url });
+        //             let clipLayer = new Cesium.ImageryLayer(imageryProvider, { rectangle });
+        //             _mergeImageryStyle(clipLayer, { alpha, brightness, contrast, gamma, hue, saturation, splitDirection, transperantBackColor, transperantBackColorTolerance })
+        //             this.imageryLayers.add(clipLayer, index)
+        //         })
+        //     }
+        // }
+        // function cancelClipImageryLayer() {
+        //     let clipLayers = this.getShowImageryLayer()
+        //     if (clipLayers.length > 0) {
+        //         clipLayers.map((layer) => {
+        //             let index = layer._layerIndex;
+        //             let url = layer._imageryProvider._url.substring(0, layer._imageryProvider._url.length - 1)
+        //             let { alpha, brightness, contrast, gamma, hue, saturation, splitDirection, transperantBackColor, transperantBackColorTolerance } = layer
+        //             this.imageryLayers.remove(layer)
+        //             let imageryProvider = new Cesium.SuperMapImageryProvider({ url });
+        //             let noClipLayer = new Cesium.ImageryLayer(imageryProvider);
+        //             _mergeImageryStyle(noClipLayer, { alpha, brightness, contrast, gamma, hue, saturation, splitDirection, transperantBackColor, transperantBackColorTolerance })
+        //             this.imageryLayers.add(noClipLayer, index)
+        //         })
+        //     }
+        // }
         function getShowImageryLayer() {
             return this.imageryLayerArray.filter(layer => {
                 return layer.show && layer.alpha !== 0
@@ -118,7 +121,7 @@ define(['Cesium'], function (Cesium) {
             }
 
             //初始化天地图全球中文注记服务，并添加至影像图层
-            var labelImagery = new Cesium.TiandituImageryProvider({
+            let labelImagery = new Cesium.TiandituImageryProvider({
                 mapStyle: Cesium.TiandituMapsStyle[mapStyle], //天地图全球中文注记服务（经纬度投影）
                 token: tdituToken
             });
@@ -222,6 +225,7 @@ define(['Cesium'], function (Cesium) {
             return addCanvasEventListener(event, function (e) {
                 let arg = new Object()
                 for (key in e) {
+                    arg["canvasposition"] = e[key];
                     let position = this.scene.pickPosition(e[key]);
                     position && (arg[key] = position);
                 }
@@ -229,7 +233,7 @@ define(['Cesium'], function (Cesium) {
             }.bind(this), modifier)
         }
         /**
-         * 笛卡尔坐标系转84经纬度
+         * ECEF转84经纬度
          * @param {object} cartesian 
          * @returns {object} {B,L,H}
          */
@@ -266,7 +270,7 @@ define(['Cesium'], function (Cesium) {
                         break
                     case 'Distance':
                         _processDistanceMeasure(result, handler)
-                        callback(result)
+                        callback(result, handler)
                         break
                     case 'DVH':
                         _processDVHMeasure(result, handler)
@@ -351,8 +355,7 @@ define(['Cesium'], function (Cesium) {
             longitude += offset.longitudeOffset ? offset.longitudeOffset : 0;
             let pitch = this.camera.pitch
             let heading = this.camera.heading
-            let roll = this.camera.roll
-            // console.log(this.camera.position) //camera.position为投影坐标系
+            let roll = this.camera.roll // console.log(this.camera.position) //camera.position为投影坐标系
             return {
                 destination: this.Cesium.Cartesian3.fromRadians(longitude, latitude, height),
                 orientation: {
@@ -395,13 +398,94 @@ define(['Cesium'], function (Cesium) {
             copyOption.destination = destination
             this.camera.flyTo(copyOption);
         }
-        function projectCoordinateToCartesian(x, y, z) {
+        function ProjectCoordinateToCartesian(x, y, z) {
             let point = new Cesium.Cartesian3(x, y, z);
             let radBLH = this.scene.mapProjection.unproject(point);
             let L = Cesium.Math.toDegrees(radBLH.longitude);
             let B = Cesium.Math.toDegrees(radBLH.latitude);
             let cartesian = Cesium.Cartesian3.fromDegrees(L, B, radBLH.height);
             return cartesian
+        }
+        function projectCoordinateToCartesian(projectCoordinate) {
+            let radBLH = this.scene.mapProjection.unproject(projectCoordinate);
+            let L = Cesium.Math.toDegrees(radBLH.longitude);
+            let B = Cesium.Math.toDegrees(radBLH.latitude);
+            let cartesian = Cesium.Cartesian3.fromDegrees(L, B, radBLH.height);
+            return cartesian
+        }
+        //火星==>百度
+        function GCJ02ToBadiu(ggLngLat) {
+            let x = ggLngLat.lng,
+                y = ggLngLat.lat;
+            let z = Math.sqrt(x * x + y * y) + 0.00002 * Math.sin(y * x_pi);
+            let theta = Math.atan2(y, x) + 0.000003 * Math.cos(x * x_pi);
+            let bd_lng = z * Math.cos(theta) + 0.0065;
+            let bd_lat = z * Math.sin(theta) + 0.006;
+
+            return {
+                lng: bd_lng,
+                lat: bd_lat
+            }
+        }
+        //百度==>火星
+        function baiduToGCJ02(bdLngLat) {
+            let x = bdLngLat.lng - 0.0065,
+                y = bdLngLat.lat - 0.006;
+            let z = Math.sqrt(x * x + y * y) - 0.00002 * Math.sin(y * x_pi);
+            let theta = Math.atan2(y, x) - 0.000003 * Math.cos(x * x_pi);
+            gg_lng = z * Math.cos(theta);
+            gg_lat = z * Math.sin(theta);
+
+            return {
+                lng: gg_lng,
+                lat: gg_lat
+            }
+        }
+        /**
+         * WGS84转GCj02
+         * @param lng
+         * @param lat
+         * @returns {*[]}
+         */
+        function wgs84togcj02(lng, lat) {
+            if (isOutSideChina(lng, lat)) {
+                return [lng, lat]
+            } else {
+                var dlat = _transformlat(lng - 105.0, lat - 35.0);
+                var dlng = _transformlng(lng - 105.0, lat - 35.0);
+                var radlat = lat / 180.0 * pi;
+                var magic = Math.sin(radlat);
+                magic = 1 - ee * magic * magic;
+                var sqrtmagic = Math.sqrt(magic);
+                dlat = (dlat * 180.0) / ((a * (1 - ee)) / (magic * sqrtmagic) * pi);
+                dlng = (dlng * 180.0) / (a / sqrtmagic * Math.cos(radlat) * pi);
+                var mglat = lat + dlat;
+                var mglng = lng + dlng;
+                return [mglng, mglat]
+            }
+        }
+        /**
+         * GCJ02 转换为 WGS84
+         * @param lng
+         * @param lat
+         * @returns {*[]}
+         */
+        function gcj02towgs84(lng, lat) {
+            if (isOutSideChina(lng, lat)) {
+                return [lng, lat]
+            } else {
+                var dlat = _transformlat(lng - 105.0, lat - 35.0);
+                var dlng = _transformlng(lng - 105.0, lat - 35.0);
+                var radlat = lat / 180.0 * pi;
+                var magic = Math.sin(radlat);
+                magic = 1 - ee * magic * magic;
+                var sqrtmagic = Math.sqrt(magic);
+                dlat = (dlat * 180.0) / ((a * (1 - ee)) / (magic * sqrtmagic) * pi);
+                dlng = (dlng * 180.0) / (a / sqrtmagic * Math.cos(radlat) * pi);
+                mglat = lat + dlat;
+                mglng = lng + dlng;
+                return [lng * 2 - mglng, lat * 2 - mglat]
+            }
         }
         /**
          * 获取地图视图当前中心位置的坐标
@@ -419,10 +503,17 @@ define(['Cesium'], function (Cesium) {
          */
         function restrictedView(restrictedViewRectangle, homeViewRectangle) {
             // let r = new Cesium.Rectangle(0.012980446876886686, 0.0003970090952860756, 0.027238083608254474, 0.008689209673973042)
+            this.restrictedViewFlag = true
             return this.camera.changed.addEventListener(function () {
-                // let { height, latitude, longitude } = this.camera.positionCartographic
-                if (!Cesium.Rectangle.contains(restrictedViewRectangle, this.camera.positionCartographic)) {
-                    this.camera.flyTo({ destination: homeViewRectangle, duration: 1 })
+                if (this.restrictedViewFlag) {
+                    // let { height, latitude, longitude } = this.camera.positionCartographic
+                    if (!Cesium.Rectangle.contains(restrictedViewRectangle, this.camera.positionCartographic)) {
+                        this.camera.flyTo({ destination: homeViewRectangle, duration: 1 })
+                    }
+                    this.restrictedViewFlag = false
+                    setTimeout(() => {
+                        this.restrictedViewFlag = true;
+                    }, 1000);
                 }
             }, this)
         }
@@ -440,7 +531,6 @@ define(['Cesium'], function (Cesium) {
             })
             return tile3DLayers;
         }
-
         function hideTile3DLayers(tile3DLayers) {
             tile3DLayers.map(function (layer) {
                 layer.visible = false
@@ -450,6 +540,207 @@ define(['Cesium'], function (Cesium) {
             tile3DLayers.map(function (layer) {
                 layer.visible = true
             })
+        }
+        function createTooltip(frameDiv) {
+
+            let tooltip = function (frameDiv) {
+
+                let div = document.createElement('DIV');
+                div.className = "twipsy left";
+
+                let arrow = document.createElement('DIV');
+                arrow.className = "twipsy-arrow";
+                div.appendChild(arrow);
+
+                let title = document.createElement('DIV');
+                title.className = "twipsy-inner";
+                div.appendChild(title);
+
+                this._div = div;
+                this._title = title;
+                this.message = '';
+
+                // add to frame div and display coordinates
+                frameDiv.appendChild(div);
+                let that = this;
+                div.onmousemove = function (evt) {
+                    that.showAt({ x: evt.clientX, y: evt.clientY }, that.message);
+                };
+            };
+
+            tooltip.prototype.setVisible = function (visible) {
+                this._div.style.display = visible ? 'block' : 'none';
+            };
+
+            tooltip.prototype.showAt = function (position, message) {
+                if (position && message) {
+                    this.setVisible(true);
+                    this._title.innerHTML = message;
+                    this._div.style.left = position.x - 130 + "px";
+                    this._div.style.top = (position.y - this._div.clientHeight / 2) + "px";
+                    this.message = message;
+                }
+            };
+
+            return new tooltip(frameDiv);
+        }
+        /**
+         * @param {string} serverUrl
+         * @param {obj} options
+         * {
+         *      datasjsonurl:"", require
+         *      dataUrl:"", option
+         *      dataTableName:"", option
+         * }
+         */
+        function addSceneByConfig(serverUrl, options, callback) {
+            let jsonurl = serverUrl + options.datasjsonurl;
+            Cesium.loadJson(jsonurl).then(function (jsonData) {
+                jsonData.forEach((lyr) => {
+                    let serverPath = lyr.path.replace("http://172.18.230.221:8090/iserver/services", serverUrl);
+                    serverPath += "/config"
+                    let temp = lyr.name.split('@');
+                    let layerName = temp[0];
+                    let dataSourceName = temp[1];
+                    //添加s3m图层
+                    options.name = layerName;
+                    map.scene.addS3MTilesLayerByScp(serverPath, options).then((layer) => {
+                        callback(layer)
+                        if (options.dataUrl) {
+                            let url = serverUrl + options.dataUrl; //数据服务地址   
+                            layer.setQueryParameter({ url, dataSetName: options.dataTableName, dataSourceName });
+                        }
+                    }, (error) => {
+                        console.log(error);
+                    });
+                })
+            })
+        }
+        /**
+         * 过原点任意轴旋转 理解还差点。。。
+         * @param {Cartesian3} origin 
+         * @param {Cartesian3} vector 
+         * @param {Number} angle 
+         */
+        function anyAxisRotation(origin, vector, angle) {
+            let hpr, q, orientation
+            q = new Cesium.Quaternion.fromAxisAngle(vector, Math.PI / 180 * angle)
+            hpr = Cesium.HeadingPitchRoll.fromQuaternion(q, hpr);
+            orientation = Cesium.Transforms.headingPitchRollQuaternion(origin, hpr);
+            return orientation
+        }
+        /**
+         * 
+         * @param {string} dataSourceName 
+         */
+        function getDataSourcesByName(dataSourceName) {
+            if (!dataSourceName) {
+                throw new DeveloperError('dataSourceName is required.');
+            }
+            return this.viewer.dataSources._dataSources.filter(function (dataSource) {
+                return dataSource.name === dataSourceName;
+            });
+        }
+        /**
+         * 
+         * @param {string} dataSourceName 
+         * @param {Array<entity>|entity} entities 
+         */
+        this.pickId = new Object()
+        function addEntityToDataSource(dataSourceName, entities, callback) {
+            let tempDataSources = this.getDataSourcesByName(dataSourceName)
+            if (tempDataSources.length === 0) {
+                tempDataSources.push(new Cesium.CustomDataSource(dataSourceName))
+                this.viewer.dataSources.add(tempDataSources[0]);
+            }
+            if (!Array.isArray(entities)) {
+                entities = [entities]
+            }
+
+            let uniqueIds = []
+            let uniqueEntities = entities.filter(entity => {
+                if (entity && !uniqueIds.includes(entity.id)) {
+                    uniqueIds.push(entity.id)
+                    return true
+                } else {
+                    return false
+                }
+            })
+            if (this.pickId[dataSourceName]) {
+                _registerPickId(dataSourceName, uniqueIds)
+            }
+            tempDataSources.forEach((tempDataSource) => {
+                tempDataSource.entities.suspendEvents();
+                uniqueEntities.forEach((entity) => {
+                    tempDataSource.entities.add(entity)
+                })
+                tempDataSource.entities.resumeEvents();
+            })
+            // if (callback) {
+            //     throw '废弃该方法callback'
+            //     // _registerPickId(dataSourceName, uniqueIds);
+            //     // this.addCanvasEventListener('LEFT_CLICK', function (e) {
+            //     //     let pick = this.scene.pick(e.position);
+            //     //     if (pick && pick.id && (this.pickId[dataSourceName].includes(pick.id.id))) {
+            //     //         callback(pick)
+            //     //     }
+            //     // }.bind(this));
+            // }
+            return tempDataSources[0]
+        }
+        function addClickEventToDataSource(dataSourceName, callback) {
+            let tempDataSources = this.getDataSourcesByName(dataSourceName)
+            if (tempDataSources.length === 0) {
+                throw "addClickEventToDataSource dataSourceName :" + dataSourceName + "不存在"
+            }
+            if (this.pickId[dataSourceName]) {
+                return
+            }
+            let uniqueIds = tempDataSources[0].entities.values.map(entity => {
+                return entity.id
+            })
+            _registerPickId(dataSourceName, uniqueIds)
+            if (callback) {
+                this.addCanvasEventListener('LEFT_CLICK', function (e) {
+                    let pick = this.scene.pick(e.position);
+                    if (pick && pick.id && (this.pickId[dataSourceName].includes(pick.id.id))) {
+                        callback(pick)
+                    }
+                }.bind(this));
+            }
+        }
+        function removeDataSource(dataSourceName) {
+            this.viewer.dataSources.remove()
+        }
+    }
+    function _transformlat(lng, lat) {
+        var ret = -100.0 + 2.0 * lng + 3.0 * lat + 0.2 * lat * lat + 0.1 * lng * lat + 0.2 * Math.sqrt(Math.abs(lng));
+        ret += (20.0 * Math.sin(6.0 * lng * pi) + 20.0 * Math.sin(2.0 * lng * pi)) * 2.0 / 3.0;
+        ret += (20.0 * Math.sin(lat * pi) + 40.0 * Math.sin(lat / 3.0 * pi)) * 2.0 / 3.0;
+        ret += (160.0 * Math.sin(lat / 12.0 * pi) + 320 * Math.sin(lat * pi / 30.0)) * 2.0 / 3.0;
+        return ret
+    }
+    /**
+     * 判断是否在国内，不在国内则不做偏移
+     * @param lng
+     * @param lat
+     * @returns {boolean}
+     */
+    function isOutSideChina(lng, lat) {
+        return (lng < 72.004 || lng > 137.8347) || ((lat < 0.8293 || lat > 55.8271) || false);
+    }
+    function _transformlng(lng, lat) {
+        var ret = 300.0 + lng + 2.0 * lat + 0.1 * lng * lng + 0.1 * lng * lat + 0.1 * Math.sqrt(Math.abs(lng));
+        ret += (20.0 * Math.sin(6.0 * lng * pi) + 20.0 * Math.sin(2.0 * lng * pi)) * 2.0 / 3.0;
+        ret += (20.0 * Math.sin(lng * pi) + 40.0 * Math.sin(lng / 3.0 * pi)) * 2.0 / 3.0;
+        ret += (150.0 * Math.sin(lng / 12.0 * pi) + 300.0 * Math.sin(lng / 30.0 * pi)) * 2.0 / 3.0;
+        return ret
+    }
+    function _registerPickId(dataSourceName, uniqueIds) {
+        if (map.pickId[dataSourceName]) {
+            map.pickId[dataSourceName].push.apply(map.pickId[dataSourceName], [...uniqueIds])
+        } else {
+            map.pickId[dataSourceName] = [...uniqueIds]
         }
     }
     function _mergeImageryStyle(layer, option) {
@@ -475,11 +766,7 @@ define(['Cesium'], function (Cesium) {
         let area = mj > 1000000 ? (mj / 1000000).toFixed(2) + 'km²' : mj.toFixed(2) + '㎡'
         handler.areaLabel.text = '面积:' + area;
     }
-    function _processDistanceMeasure(result, handler) {
-        let dis = Number(result.distance);
-        let distance = dis > 1000 ? (dis / 1000).toFixed(2) + 'km' : dis.toFixed(2) + 'm';
-        handler.disLabel.text = '距离:' + distance;
-    }
+    function _processDistanceMeasure(result, handler) { }
     function _processDVHMeasure(result, handler) {
         let { distance, verticalHeight, horizontalDistance } = result
         let D = distance > 1000 ? (distance / 1000).toFixed(2) + 'km' : distance + 'm';
